@@ -30,6 +30,17 @@ export default function Home() {
     { id: 2, name: 'Formation Business', price: '25', type: 'UNIQUE', members: 12, active: true },
     { id: 3, name: 'Coaching VIP', price: '50', type: 'ANNUEL', members: 5, active: true },
   ])
+  const [subscribers, setSubscribers] = useState([
+    { id: '001', addr: 'GB...4F', plan: 'Premium Access', price: '10 π', status: 'b-ok', statusLabel: 'ACTIF', date: '01/05' },
+    { id: '002', addr: 'GA...2X', plan: 'Formation Business', price: '25 π', status: 'b-ok', statusLabel: 'ACTIF', date: '03/05' },
+    { id: '003', addr: 'GC...8M', plan: 'Coaching VIP', price: '50 π', status: 'b-proc', statusLabel: 'GRACE', date: '30/04' },
+    { id: '004', addr: 'GD...9K', plan: 'Premium Access', price: '10 π', status: 'b-ok', statusLabel: 'ACTIF', date: '05/05' },
+    { id: '005', addr: 'GE...1P', plan: 'Formation Business', price: '25 π', status: 'b-ok', statusLabel: 'ACTIF', date: '07/05' },
+  ])
+  const [isAddingSub, setIsAddingSub] = useState(false)
+  const [newSub, setNewSub] = useState({ addr: '', planId: 1 })
+  const [searchTerm, setSearchTerm] = useState('')
+
   const [isAddingService, setIsAddingService] = useState(false)
   const [newService, setNewService] = useState({ name: '', price: '', type: 'MENSUEL' })
   const [logs, setLogs] = useState([
@@ -45,20 +56,40 @@ export default function Home() {
     setLogs(prev => [...prev, { type, msg: `[${time}] ${msg}` }])
   }
 
-  const handleAddService = () => {
-    if (!newService.name || !newService.price) return
-    const id = Date.now()
-    setServices([...services, { ...newService, id, members: 0, active: true }])
-    addLog(`SUCCESS › Nouveau service créé : ${newService.name} (π ${newService.price})`, 'neon')
-    setNewService({ name: '', price: '', type: 'MENSUEL' })
-    setIsAddingService(false)
+  const handleAddSub = () => {
+    if (!newSub.addr) return
+    const service = services.find(s => s.id === Number(newSub.planId))
+    const id = (subscribers.length + 1).toString().padStart(3, '0')
+    const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+    
+    setSubscribers([...subscribers, {
+      id,
+      addr: newSub.addr,
+      plan: service.name,
+      price: `${service.price} π`,
+      status: 'b-ok',
+      statusLabel: 'ACTIF',
+      date
+    }])
+    
+    // Update service member count
+    setServices(services.map(s => s.id === service.id ? { ...s, members: s.members + 1 } : s))
+    
+    addLog(`SUCCESS › Nouvel abonné enregistré : ${newSub.addr}`, 'neon')
+    setNewSub({ addr: '', planId: 1 })
+    setIsAddingSub(false)
   }
 
-  const deleteService = (id) => {
-    const s = services.find(x => x.id === id)
-    setServices(services.filter(x => x.id !== id))
-    addLog(`WARN › Service supprimé : ${s.name}`, 'amber')
+  const deleteSub = (id) => {
+    const s = subscribers.find(x => x.id === id)
+    setSubscribers(subscribers.filter(x => x.id !== id))
+    addLog(`WARN › Abonné supprimé : ${s.addr}`, 'amber')
   }
+
+  const filteredSubs = subscribers.filter(s => 
+    s.addr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.plan.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const handleCommand = (e) => {
     if (e.key !== 'Enter') return
@@ -372,36 +403,90 @@ export default function Home() {
 
         {/* ══ ABONNÉS ══ */}
         <div className={`tab-pane ${activeTab === 'subscribers' ? 'active' : ''}`}>
-          <div className="slabel">liste des abonnés</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="slabel" style={{ margin: 0 }}>liste des abonnés</div>
+            <button className="btn-neon" style={{ padding: '8px 16px', fontSize: 11 }} onClick={() => setIsAddingSub(!isAddingSub)}>
+              {isAddingSub ? '✕ ANNULER' : '+ NOUVEL ABONNÉ'}
+            </button>
+          </div>
+
+          {isAddingSub && (
+            <div className="panel" style={{ marginBottom: 24, border: '1px solid var(--cyan)' }}>
+              <div className="ptitle" style={{ color: 'var(--cyan)' }}><span className="icon">👤</span> INSCRIPTION MANUELLE</div>
+              <div className="g3" style={{ gap: 16 }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>ADRESSE PI DU MEMBRE</div>
+                  <input
+                    className="cmd-input"
+                    style={{ border: '1px solid var(--border)', width: '100%', background: 'rgba(255,255,255,0.02)' }}
+                    placeholder="ex: GDX...4F"
+                    value={newSub.addr}
+                    onChange={(e) => setNewSub({ ...newSub, addr: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>CHOIX DU SERVICE</div>
+                  <select
+                    className="cmd-input"
+                    style={{ border: '1px solid var(--border)', width: '100%', background: 'var(--void)', height: 38 }}
+                    value={newSub.planId}
+                    onChange={(e) => setNewSub({ ...newSub, planId: e.target.value })}
+                  >
+                    {services.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} (π {s.price})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button className="btn-neon" style={{ marginTop: 20, width: '100%', borderColor: 'var(--cyan)', color: 'var(--cyan)' }} onClick={handleAddSub}>
+                ENREGISTRER LE MEMBRE DANS LE SYSTÈME
+              </button>
+            </div>
+          )}
+
           <div className="panel">
-            <div className="ptitle"><span className="icon">👥</span> ABONNÉS ACTIFS — 432</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div className="ptitle"><span className="icon">👥</span> ABONNÉS ACTIFS — {subscribers.length}</div>
+              <input
+                className="cmd-input"
+                style={{ border: '1px solid var(--border)', width: '250px', fontSize: 11, padding: '6px 12px' }}
+                placeholder="🔍 Rechercher une adresse..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="dtable">
                 <thead>
-                  <tr><th>#</th><th>Adresse Pi</th><th>Service</th><th>Prix</th><th>Statut</th><th>Prochain paiement</th></tr>
+                  <tr><th>#</th><th>Adresse Pi</th><th>Service</th><th>Prix</th><th>Statut</th><th>Expiration</th><th>Action</th></tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: '001', addr: 'GB...4F', plan: 'Premium', price: '10 π', status: 'b-ok', statusLabel: 'ACTIF', date: '01/05' },
-                    { id: '002', addr: 'GA...2X', plan: 'Formation', price: '25 π', status: 'b-ok', statusLabel: 'ACTIF', date: '03/05' },
-                    { id: '003', addr: 'GC...8M', plan: 'VIP', price: '50 π', status: 'b-proc', statusLabel: 'GRACE', date: '30/04' },
-                    { id: '004', addr: 'GD...9K', plan: 'Premium', price: '10 π', status: 'b-ok', statusLabel: 'ACTIF', date: '05/05' },
-                    { id: '005', addr: 'GE...1P', plan: 'Formation', price: '25 π', status: 'b-ok', statusLabel: 'ACTIF', date: '07/05' },
-                  ].map((s, i) => (
-                    <tr key={i}>
+                  {filteredSubs.map((s, i) => (
+                    <tr key={s.id}>
                       <td className="mono-text">{s.id}</td>
                       <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{s.addr}</td>
                       <td>{s.plan}</td>
                       <td className="mono-text" style={{ color: 'var(--neon)' }}>{s.price}</td>
                       <td><span className={`badge ${s.status}`}>{s.statusLabel}</span></td>
                       <td className="mono-text">{s.date}</td>
+                      <td>
+                        <button className="btn-small" style={{ color: 'var(--red)', borderColor: 'rgba(255,0,0,0.1)', padding: '2px 8px' }} onClick={() => deleteSub(s.id)}>SUPPR.</button>
+                      </td>
                     </tr>
                   ))}
+                  {filteredSubs.length === 0 && (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--ghost)', fontFamily: 'var(--mono)', fontSize: 12 }}>
+                        AUCUN ABONNÉ TROUVÉ DANS LA BASE DE DONNÉES
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
+
 
         {/* ══ TRANSACTIONS ══ */}
         <div className={`tab-pane ${activeTab === 'transactions' ? 'active' : ''}`}>
