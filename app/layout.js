@@ -1,21 +1,19 @@
 import './globals.css'
-import Sidebar from '@/components/Sidebar'
 
 export const metadata = {
-  title: 'PiRC2 Merchant Dashboard',
-  description: 'Premium subscription management for Pi Network merchants',
+  title: 'PiRC2 Merchant — Command Center',
+  description: 'Premium Pi Network subscription management powered by PiRC2 Smart Contracts',
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <body>
-        <div className="layout-root">
-          <Sidebar />
-          <main className="app-main">
-            {children}
-          </main>
-        </div>
+        {/* Background FX */}
+        <div className="grid-overlay"></div>
+        <div className="scan-lines"></div>
+        <div className="vignette"></div>
+        {children}
       </body>
     </html>
   )

@@ -1,231 +1,31 @@
-.home-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+/* page.css — 1116 Studios × PiRC2 : styles spécifiques page */
+/* La majorité du design est dans globals.css */
+
+/* Neon glow sur les valeurs KPI au hover */
+.kpi:hover .kpi-val {
+  text-shadow: 0 0 30px rgba(170,255,0,.3);
 }
 
-.dashboard-content {
-  padding: 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
+/* Barre de progression dynamique */
+.prog-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 6px;
 }
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
-}
-
-.dashboard-main-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
-}
-
-.main-card {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  padding: 32px;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 24px;
-  color: var(--text-primary);
-}
-
-.mock-chart {
-  height: 250px;
-  display: flex;
-  align-items: flex-end;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.chart-bar-list {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  width: 100%;
+.prog-fill {
   height: 100%;
-  gap: 20px;
+  background: linear-gradient(90deg, var(--neon2), var(--neon));
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--neon2);
+  transition: width 1s ease;
 }
 
-.chart-bar {
-  flex: 1;
-  background: linear-gradient(to top, var(--accent-purple), #8B5CF6);
-  border-radius: 8px 8px 0 0;
-  position: relative;
-  min-width: 20px;
-}
-
-.bar-glow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: inherit;
-  filter: blur(10px);
-  opacity: 0.3;
-}
-
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.activity-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-}
-
-.activity-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.user-addr {
-  font-family: monospace;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.action-text {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.activity-time {
-  font-size: 12px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  margin-left: 8px;
-}
-
-.text-red {
-  color: #EF4444;
-}
-
-.dashboard-footer {
-  margin-top: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 24px;
-  border-top: 1px solid var(--border-subtle);
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.network-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.network-dot {
-  width: 6px;
-  height: 6px;
-  background-color: #22C55E;
-  border-radius: 50%;
-  box-shadow: 0 0 5px #22C55E;
-}
-
-.status-ok { color: #22C55E; font-weight: 600; }
-
-.footer-version {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* ── TABLET (768px - 1024px) ── */
-@media (max-width: 1024px) {
-  .dashboard-content {
-    padding: 24px;
-    gap: 20px;
-  }
-
-  .dashboard-main-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-  }
-}
-
-/* ── MOBILE (<768px) ── */
-@media (max-width: 768px) {
-  .dashboard-content {
-    padding: 16px;
-    gap: 16px;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .dashboard-main-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .main-card {
-    padding: 20px;
-    border-radius: 16px;
-  }
-
-  .section-title {
-    font-size: 16px;
-    margin-bottom: 16px;
-  }
-
-  .mock-chart {
-    height: 180px;
-  }
-
-  .chart-bar-list {
-    gap: 8px;
-  }
-
-  .activity-item {
-    padding-bottom: 12px;
-  }
-
-  .user-addr {
-    font-size: 12px;
-  }
-
-  .action-text {
-    font-size: 11px;
-  }
-}
-
-/* ── SMALL MOBILE (<420px) ── */
-@media (max-width: 420px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-content {
-    padding: 12px;
-  }
+/* Canvas fixé derrière tout */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
