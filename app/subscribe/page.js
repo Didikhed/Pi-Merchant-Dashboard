@@ -55,22 +55,39 @@ const PLANS = [
 
 const FAQS = [
   {
-    q: 'Est-ce que je dois donner mes 24 mots ?',
-    a: 'JAMAIS. Personne ne vous demandera vos 24 mots ni votre mot de passe. La connexion se fait via votre Pi Browser, exactement comme pour toute autre app Pi Network.',
+    q: 'Est-ce que je dois donner mes 24 mots secrets ?',
+    a: 'JAMAIS. Personne ne vous demandera vos 24 mots ni votre mot de passe. Si quelqu\'un vous les demande, c\'est une arnaque. La connexion se fait via votre Pi Browser, exactement comme pour toute autre application Pi Network officielle.',
   },
   {
-    q: 'Comment fonctionne le paiement ?',
-    a: 'Vous connectez votre Pi Wallet, choisissez un plan, et approuvez la transaction directement dans votre Pi Browser. Le Contrat Intelligent sur la blockchain enregistre votre abonnement automatiquement.',
+    q: 'Comment fonctionne le paiement en Pi ?',
+    a: 'C\'est simple : vous connectez votre Pi Wallet, choisissez un plan, et approuvez la transaction directement dans votre Pi Browser. Le Contrat Intelligent PiRC2 sur la blockchain enregistre votre abonnement automatiquement. Aucune intervention humaine n\'est nécessaire.',
   },
   {
-    q: 'Le code est-il vraiment open-source ?',
-    a: 'Oui, 100%. Vous pouvez vérifier tout le code sur GitHub : github.com/Didikhed/Pi-Merchant-Dashboard. Rien n\'est caché.',
+    q: 'Le code est-il vraiment open-source et vérifiable ?',
+    a: 'Oui, 100%. Vous pouvez voir tout le code sur GitHub : github.com/Didikhed/Pi-Merchant-Dashboard. Chaque ligne de code est publique. N\'importe quel développeur peut vérifier que le système est honnête et transparent.',
   },
   {
-    q: 'Puis-je me désabonner ?',
-    a: 'Oui, vous pouvez arrêter votre abonnement à tout moment. Il suffit de ne pas renouveler le prochain mois.',
+    q: 'Puis-je me désabonner à tout moment ?',
+    a: 'Oui, absolument. Il n\'y a aucun engagement. Votre abonnement est mensuel. Si vous ne souhaitez pas renouveler, il vous suffit de ne pas approuver le paiement du mois suivant. Aucune pénalité, aucune complication.',
+  },
+  {
+    q: 'Quand est-ce que je reçois mes accès après paiement ?',
+    a: 'Dès que votre transaction est confirmée sur la blockchain Pi (environ 2 à 5 secondes), votre abonnement est actif. Vous recevrez un message WhatsApp avec vos accès dans les minutes qui suivent.',
+  },
+  {
+    q: 'Est-ce que c\'est lié à Pi Network officiel ?',
+    a: 'Non. Ce dashboard est un outil créé par un membre de la communauté Pi (pas par Pi Network Inc.). Il utilise la technologie blockchain de Pi Network pour les paiements, mais n\'est pas un produit officiel de Pi Network. Nous sommes transparents là-dessus.',
+  },
+  {
+    q: 'Que se passe-t-il si mon paiement échoue ?',
+    a: 'Si une transaction échoue (solde insuffisant, connexion interrompue), aucun Pi n\'est débité. Votre wallet est protégé. Vous pouvez réessayer à tout moment. Le système entre automatiquement dans une "période de grâce" de 3 jours avant suspension.',
+  },
+  {
+    q: 'Comment contacter le support si j\'ai un problème ?',
+    a: 'Vous pouvez nous contacter directement par WhatsApp ou via le canal de la communauté. Nous répondons dans les 24 heures. Pour les problèmes techniques urgents, le délai de réponse est de 2 heures maximum.',
   },
 ]
+
 
 export default function Subscribe() {
   const [selectedPlan, setSelectedPlan] = useState('formation')
