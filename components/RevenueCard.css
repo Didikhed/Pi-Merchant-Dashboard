@@ -81,3 +81,35 @@
   font-size: 14px;
   font-weight: 500;
 }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .revenue-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .revenue-card:hover {
+    transform: none; /* Désactive l'animation hover sur mobile */
+  }
+
+  .card-value {
+    font-size: 24px;
+    letter-spacing: -0.5px;
+  }
+
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .card-label {
+    font-size: 12px;
+  }
+
+  .card-trend {
+    font-size: 11px;
+  }
+}
+
