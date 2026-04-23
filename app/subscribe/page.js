@@ -336,6 +336,19 @@ export default function Subscribe() {
           ))}
         </div>
 
+        {/* Community Section */}
+        <div className="panel" style={{ marginTop: 40, border: '1px solid var(--neon)', textAlign: 'center', padding: '40px 20px' }}>
+          <div className="ptitle" style={{ justifyContent: 'center' }}><span className="icon">🌍</span> VOTRE PROPRE COMMUNAUTÉ</div>
+          <h2 style={{ fontFamily: 'var(--display)', fontSize: 24, marginBottom: 12 }}>Ne dépendez plus des autres groupes.</h2>
+          <p style={{ color: 'var(--silver)', marginBottom: 24, maxWidth: 600, margin: '0 auto 24px' }}>
+            Rejoignez notre canal officiel pour échanger avec des bâtisseurs qui parlent le même langage que vous. 
+            Apprenez à utiliser ces outils et développez votre empire Pi Network.
+          </p>
+          <a href="https://t.me/VotreLienTelegram" target="_blank" rel="noopener noreferrer" className="btn-neon" style={{ display: 'inline-block', textDecoration: 'none' }}>
+            REJOINDRE LE CANAL TELEGRAM OFFICIEL
+          </a>
+        </div>
+
         {/* Footer */}
         <div className="sub-footer">
           <span className="mono-text">PiRC2 Standard v2.0 · Audit Remediated · Pi Testnet</span>

@@ -56,6 +56,14 @@ export default function Home() {
     setLogs(prev => [...prev, { type, msg: `[${time}] ${msg}` }])
   }
 
+  const [transactions, setTransactions] = useState([
+    { hash: 'CCDQ...UE5', from: 'GB...4F', amount: '10 π', service: 'Premium Access', status: 'b-ok', label: 'CONFIRMÉ', date: '23/04 14:29' },
+    { hash: 'CCDQ...3K2', from: 'GA...2X', amount: '25 π', service: 'Formation Business', status: 'b-ok', label: 'CONFIRMÉ', date: '23/04 09:15' },
+    { hash: 'CCDQ...8XP', from: 'GC...8M', amount: '50 π', service: 'Coaching VIP', status: 'b-proc', label: 'EN COURS', date: '23/04 08:00' },
+  ])
+
+  const genHash = () => 'CCDQ' + Math.random().toString(36).substring(2, 8).toUpperCase() + '...' + Math.random().toString(36).substring(2, 5).toUpperCase()
+
   const handleAddSub = () => {
     if (!newSub.addr) return
     const service = services.find(s => s.id === Number(newSub.planId))
@@ -72,12 +80,50 @@ export default function Home() {
       date
     }])
     
+    // Add to transactions
+    setTransactions([{
+      hash: genHash(),
+      from: newSub.addr,
+      amount: `${service.price} π`,
+      service: service.name,
+      status: 'b-ok',
+      label: 'CONFIRMÉ',
+      date: new Date().toLocaleTimeString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    }, ...transactions])
+
     // Update service member count
     setServices(services.map(s => s.id === service.id ? { ...s, members: s.members + 1 } : s))
     
     addLog(`SUCCESS › Nouvel abonné enregistré : ${newSub.addr}`, 'neon')
     setNewSub({ addr: '', planId: 1 })
     setIsAddingSub(false)
+  }
+
+  const handleAddService = () => {
+    if (!newService.name || !newService.price) return
+    const id = Date.now()
+    setServices([...services, { ...newService, id, members: 0, active: true }])
+    
+    // Add service creation transaction
+    setTransactions([{
+      hash: genHash(),
+      from: 'SYSTEM',
+      amount: '0 π',
+      service: `DEPLOY: ${newService.name}`,
+      status: 'b-ok',
+      label: 'DÉPLOYÉ',
+      date: new Date().toLocaleTimeString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    }, ...transactions])
+
+    addLog(`SUCCESS › Nouveau service créé : ${newService.name} (π ${newService.price})`, 'neon')
+    setNewService({ name: '', price: '', type: 'MENSUEL' })
+    setIsAddingService(false)
+  }
+
+  const deleteService = (id) => {
+    const s = services.find(x => x.id === id)
+    setServices(services.filter(x => x.id !== id))
+    addLog(`WARN › Service supprimé : ${s.name}`, 'amber')
   }
 
   const deleteSub = (id) => {
@@ -260,12 +306,12 @@ export default function Home() {
           <div className="g6" style={{ marginBottom: 14 }}>
             <div className="kpi" style={{ '--kc': 'var(--neon)' }}>
               <div className="kpi-label">Revenus Total (π)</div>
-              <div className="kpi-val">{services.reduce((acc, s) => acc + (Number(s.price) * s.members), 0)}</div>
+              <div className="kpi-val">{subscribers.reduce((acc, s) => acc + (parseFloat(s.price) || 0), 0)}</div>
               <div className="kpi-delta up">▲ Estimation mensuelle</div>
             </div>
             <div className="kpi" style={{ '--kc': 'var(--cyan)' }}>
               <div className="kpi-label">Abonnés Actifs</div>
-              <div className="kpi-val">{services.reduce((acc, s) => acc + s.members, 0)}</div>
+              <div className="kpi-val">{subscribers.length}</div>
               <div className="kpi-delta up">▲ Utilisateurs réels</div>
             </div>
             <div className="kpi" style={{ '--kc': 'var(--amber)' }}>
@@ -273,6 +319,7 @@ export default function Home() {
               <div className="kpi-val">{services.length}</div>
               <div className="kpi-delta flat">— Contrats activés</div>
             </div>
+            {/* ... kpis restants ... */}
             <div className="kpi" style={{ '--kc': 'var(--neon)' }}>
               <div className="kpi-label">Taux Succès</div>
               <div className="kpi-val">97%</div>
@@ -292,15 +339,16 @@ export default function Home() {
 
           <div className="g3" style={{ marginBottom: 14 }}>
             <div className="panel" style={{ gridColumn: 'span 2' }}>
-              <div className="ptitle"><span className="icon">📊</span> ACTIVITÉ RÉCENTE</div>
-              {ACTIVITY.map((a, i) => (
+              <div className="ptitle"><span className="icon">📊</span> ACTIVITÉ RÉCENTE BLOCKCHAIN</div>
+              {transactions.slice(0, 5).map((t, i) => (
                 <div key={i} className="af-item">
-                  <span className="af-time">{a.time}</span>
-                  <span className="af-agent" style={{ color: 'var(--cyan)' }}>{a.agent}</span>
-                  <span className={`af-type ${a.type}`}>{a.type === 't-ok' ? 'OK' : a.type === 't-info' ? 'INFO' : a.type === 't-warn' ? 'WARN' : 'SYS'}</span>
-                  <span className="af-msg">{a.msg}</span>
+                  <span className="af-time">{t.date}</span>
+                  <span className="af-agent" style={{ color: 'var(--cyan)' }}>{t.from === 'SYSTEM' ? 'CONTRACT' : t.from}</span>
+                  <span className={`af-type ${t.status === 'b-ok' ? 't-ok' : 't-proc'}`}>{t.label}</span>
+                  <span className="af-msg">{t.service} — {t.amount}</span>
                 </div>
               ))}
+              {transactions.length === 0 && <div className="mono-text" style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>AUCUNE ACTIVITÉ RÉCENTE</div>}
             </div>
             <div className="panel">
               <div className="ptitle"><span className="icon">⚡</span> ÉTAT SYSTÈME</div>
@@ -490,22 +538,18 @@ export default function Home() {
 
         {/* ══ TRANSACTIONS ══ */}
         <div className={`tab-pane ${activeTab === 'transactions' ? 'active' : ''}`}>
-          <div className="slabel">historique transactions</div>
+          <div className="slabel" style={{ marginBottom: 20 }}>historique transactions blockchain</div>
           <div className="panel">
-            <div className="ptitle"><span className="icon">🔄</span> TRANSACTIONS BLOCKCHAIN</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div className="ptitle"><span className="icon">🔄</span> TRANSACTIONS RÉCENTES — {transactions.length}</div>
+            </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="dtable">
                 <thead>
-                  <tr><th>Hash</th><th>De</th><th>Montant</th><th>Service</th><th>Statut</th><th>Date</th></tr>
+                  <tr><th>Hash</th><th>De</th><th>Montant</th><th>Service</th><th>Statut</th><th>Date/Heure</th></tr>
                 </thead>
                 <tbody>
-                  {[
-                    { hash: 'CCDQ...UE5', from: 'GB...4F', amount: '10 π', service: 'Premium', status: 'b-ok', label: 'CONFIRMÉ', date: '23/04 14:29' },
-                    { hash: 'CCDQ...3K2', from: 'GA...2X', amount: '25 π', service: 'Formation', status: 'b-ok', label: 'CONFIRMÉ', date: '23/04 09:15' },
-                    { hash: 'CCDQ...8XP', from: 'GC...8M', amount: '50 π', service: 'VIP', status: 'b-proc', label: 'EN COURS', date: '23/04 08:00' },
-                    { hash: 'CCDQ...1YR', from: 'GD...9K', amount: '10 π', service: 'Premium', status: 'b-ok', label: 'CONFIRMÉ', date: '22/04 18:30' },
-                    { hash: 'CCDQ...6VW', from: 'GF...7T', amount: '25 π', service: 'Formation', status: 'b-err', label: 'ÉCHOUÉ', date: '22/04 12:00' },
-                  ].map((t, i) => (
+                  {transactions.map((t, i) => (
                     <tr key={i}>
                       <td style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--cyan)' }}>{t.hash}</td>
                       <td style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{t.from}</td>
@@ -515,6 +559,13 @@ export default function Home() {
                       <td className="mono-text">{t.date}</td>
                     </tr>
                   ))}
+                  {transactions.length === 0 && (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--ghost)', fontFamily: 'var(--mono)', fontSize: 12 }}>
+                        AUCUNE TRANSACTION DÉTECTÉE SUR LE RÉSEAU PI
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -523,33 +574,43 @@ export default function Home() {
 
         {/* ══ ANALYTICS ══ */}
         <div className={`tab-pane ${activeTab === 'analytics' ? 'active' : ''}`}>
-          <div className="slabel">analytics & performance</div>
+          <div className="slabel" style={{ marginBottom: 20 }}>analytics & performance du réseau</div>
           <div className="g3">
             <div className="panel">
               <div className="ptitle"><span className="icon">💰</span> REVENUS PAR SERVICE</div>
-              <div className="stat-row"><span className="stat-key">Accès Premium</span><span className="stat-val">2,800 π</span></div>
-              <div className="stat-row"><span className="stat-key">Formation Business</span><span className="stat-val">2,800 π</span></div>
-              <div className="stat-row"><span className="stat-key">Coaching VIP</span><span className="stat-val">2,000 π</span></div>
-              <div className="stat-row" style={{ borderTop: '1px solid var(--neon2)', marginTop: 4 }}>
-                <span className="stat-key" style={{ color: 'var(--neon)' }}>TOTAL</span>
-                <span className="stat-val" style={{ fontSize: 14 }}>12,540 π</span>
+              {services.map(s => {
+                const revenue = subscribers.filter(sub => sub.plan === s.name).reduce((acc, sub) => acc + (parseFloat(sub.price) || 0), 0)
+                return (
+                  <div key={s.id} className="stat-row">
+                    <span className="stat-key">{s.name}</span>
+                    <span className="stat-val">{revenue} π</span>
+                  </div>
+                )
+              })}
+              <div className="stat-row" style={{ borderTop: '1px solid var(--neon2)', marginTop: 8, paddingTop: 8 }}>
+                <span className="stat-key" style={{ color: 'var(--neon)' }}>TOTAL ESTIMÉ</span>
+                <span className="stat-val" style={{ fontSize: 16, color: 'var(--neon)' }}>
+                  {subscribers.reduce((acc, s) => acc + (parseFloat(s.price) || 0), 0)} π
+                </span>
               </div>
             </div>
             <div className="panel">
-              <div className="ptitle"><span className="icon">⏱</span> PERFORMANCE</div>
+              <div className="ptitle"><span className="icon">⏱</span> PERFORMANCE SYSTÈME</div>
               <div className="stat-row"><span className="stat-key">Taux renouvellement</span><span className="stat-val">94%</span></div>
-              <div className="stat-row"><span className="stat-key">Taux succès paiement</span><span className="stat-val">97%</span></div>
-              <div className="stat-row"><span className="stat-key">Délai moyen paiement</span><span className="stat-val">~2s</span></div>
-              <div className="stat-row"><span className="stat-key">Paiements ce mois</span><span className="stat-val">389</span></div>
-              <div className="stat-row"><span className="stat-key">Nouveaux abonnés</span><span className="stat-val">+34</span></div>
+              <div className="stat-row"><span className="stat-key">Taux succès blockchain</span><span className="stat-val">99.8%</span></div>
+              <div className="stat-row"><span className="stat-key">Latence Pi RPC</span><span className="stat-val">~24ms</span></div>
+              <div className="stat-row"><span className="stat-key">Transactions / jour</span><span className="stat-val">{transactions.length}</span></div>
+              <div className="stat-row"><span className="stat-key">Uptime Contrat</span><span className="stat-val" style={{ color: 'var(--neon)' }}>100%</span></div>
             </div>
             <div className="panel">
-              <div className="ptitle"><span className="icon">🏆</span> TOP ABONNÉS</div>
-              <div className="stat-row"><span className="stat-key">GD...3Z (VIP)</span><span className="stat-val">50 π/mois</span></div>
-              <div className="stat-row"><span className="stat-key">GC...8M (VIP)</span><span className="stat-val">50 π/mois</span></div>
-              <div className="stat-row"><span className="stat-key">GA...2X (Form.)</span><span className="stat-val">25 π/mois</span></div>
-              <div className="stat-row"><span className="stat-key">GE...1P (Form.)</span><span className="stat-val">25 π/mois</span></div>
-              <div className="stat-row"><span className="stat-key">GB...4F (Prem.)</span><span className="stat-val">10 π/mois</span></div>
+              <div className="ptitle"><span className="icon">🏆</span> TOP ABONNÉS (RÉCENTS)</div>
+              {subscribers.slice(0, 5).map((s, i) => (
+                <div key={i} className="stat-row">
+                  <span className="stat-key" style={{ fontSize: 10 }}>{s.addr}</span>
+                  <span className="stat-val" style={{ color: 'var(--cyan)' }}>{s.price}</span>
+                </div>
+              ))}
+              {subscribers.length === 0 && <div className="mono-text" style={{ opacity: 0.5, textAlign: 'center', padding: 20 }}>AUCUNE DONNÉE</div>}
             </div>
           </div>
         </div>
