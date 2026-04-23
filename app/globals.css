@@ -1,3 +1,4 @@
+/* ── GLOBALS ── */
 :root {
   --bg-primary: #0D0D12;
   --bg-secondary: #1A1A24;
@@ -77,4 +78,11 @@ button {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .app-main {
+    margin-left: 0;
+  }
 }

@@ -1,3 +1,4 @@
+/* ── SIDEBAR ── */
 .sidebar {
   width: 260px;
   height: 100vh;
@@ -9,7 +10,8 @@
   position: fixed;
   left: 0;
   top: 0;
-  z-index: 100;
+  z-index: 200;
+  transition: transform 0.3s ease;
 }
 
 .sidebar-logo {
@@ -96,4 +98,60 @@
   background-color: var(--accent-gold);
   border-radius: 50%;
   box-shadow: 0 0 8px var(--accent-gold);
+}
+
+/* ── HAMBURGER BUTTON (mobile only) ── */
+.hamburger-btn {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 16px;
+  z-index: 300;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ham-line {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+/* ── OVERLAY (mobile) ── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 150;
+  backdrop-filter: blur(2px);
+}
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 240px;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
 }
