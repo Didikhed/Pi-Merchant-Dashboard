@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌔 Pi Merchant Dashboard — Command Center v2.0
 
-## Getting Started
+> **Le hub de gestion ultime pour les marchands du réseau Pi.**  
+> Sécurisé. Transparent. Automatisé.
 
-First, run the development server:
+![Dashboard Preview](https://raw.githubusercontent.com/Didikhed/Pi-Merchant-Dashboard/main/public/preview.png)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 💎 Vision & Transparence
+Ce dashboard a été conçu pour offrir aux marchands du réseau Pi une interface de gestion de classe mondiale. Nous croyons en une économie décentralisée où la **confiance** est le pilier central.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Non-Custodial** : Nous ne demandons JAMAIS vos 24 mots secrets. Vous gardez le contrôle total de vos fonds via le Pi Browser.
+- **Open-Source** : Chaque ligne de code est publique et vérifiable par la communauté.
+- **PiRC2 Standard** : Utilisation des Smart Contracts Soroban (Stellar) pour une automatisation parfaite.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 🚀 Fonctionnalités Clés
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 📊 Command Center (Overview)
+Une vision d'ensemble de votre empire en temps réel. Suivez vos revenus, vos abonnés actifs et l'état de santé de vos contrats intelligents.
 
-## Learn More
+### 🛠️ Gestion des Services
+Créez et gérez vos offres d'abonnement dynamiquement :
+- Définition des prix en π.
+- Type d'abonnement (Mensuel, Annuel).
+- Déploiement instantané sur la blockchain.
 
-To learn more about Next.js, take a look at the following resources:
+### 👥 Gestion des Abonnés
+Suivez votre communauté avec précision :
+- Liste des membres actifs.
+- Barre de recherche par adresse Pi.
+- Inscription manuelle pour vos partenaires privilégiés.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### ⛓️ Blockchain Analytics
+Historique complet des transactions PiRC2. Chaque paiement est vérifiable on-chain avec son hash unique.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🤖 Automatisation (GitHub Actions)
+Le dashboard inclut un robot de prélèvement automatique qui :
+- Scanne les abonnements arrivant à échéance.
+- Exécute les transactions via le Smart Contract.
+- Gère les périodes de grâce en cas d'échec de paiement.
 
-## Deploy on Vercel
+## 🛠️ Stack Technique
+- **Frontend** : Next.js 14+, React Hooks, CSS Cyberpunk/Neon.
+- **Backend** : Soroban Smart Contracts (Rust).
+- **Automation** : GitHub Actions & Stellar CLI.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🌍 Rejoignez la Communauté
+Ne dépendez plus des groupes tiers. Bâtissez votre propre réseau sur des bases solides.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **GitHub** : [Didikhed/Pi-Merchant-Dashboard](https://github.com/Didikhed/Pi-Merchant-Dashboard)
+- **Support** : [Canal Telegram Officiel](https://t.me/VotreLien)
+
+---
+*Développé avec passion pour l'écosystème Pi Network.* 🌔🚀
