@@ -24,7 +24,51 @@ export default function Home() {
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [clock, setClock] = useState('')
+  const [cmdInput, setCmdInput] = useState('')
+  const [logs, setLogs] = useState([
+    { type: 'silver', msg: '── PiRC2 Merchant Command Center v2.0 ──' },
+    { type: 'silver', msg: 'Contrat: CCDQOQKQA5OGBWD6UIAUPZRIGXJ3MC4GQ5BX3R4DNXKP3M6EYBVYKUE5' },
+    { type: 'silver', msg: 'Réseau: Pi Testnet · RPC: rpc.testnet.minepi.com' },
+    { type: 'silver', msg: '─────────────────────────────────────────' },
+    { type: 'neon',   msg: '[08:00:00] AUTO › Traitement quotidien démarré' },
+    { type: 'neon',   msg: '[08:00:02] CONTRACT › process() appelé — limit: 50' },
+    { type: 'neon',   msg: '[08:00:04] SUCCESS › 38 paiements traités ✓' },
+    { type: 'amber',  msg: '[08:00:05] WARN › 3 abonnés en grace period' },
+    { type: 'neon',   msg: '[08:00:06] SUCCESS › Notifications envoyées ✓' },
+  ])
   const canvasRef = useRef(null)
+
+  const addLog = (msg, type = 'neon') => {
+    const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    setLogs(prev => [...prev, { type, msg: `[${time}] ${msg}` }])
+  }
+
+  const handleCommand = (e) => {
+    if (e.key !== 'Enter') return
+    const cmd = cmdInput.trim().toLowerCase()
+    if (!cmd) return
+
+    addLog(`USER › ${cmdInput}`, 'silver')
+    
+    if (cmd === '/statut') {
+      addLog('SYSTEM › Analyse du contrat PiRC2... Statut : OPÉRATIONNEL ✅', 'neon')
+      setActiveTab('overview')
+    } else if (cmd === '/ping') {
+      addLog('SYSTEM › PONG! Connexion Blockchain : 18ms 📡', 'cyan')
+    } else if (cmd === '/aide') {
+      addLog('AIDE › Commandes : /statut, /ping, /abonnés, /services, /aide', 'amber')
+    } else if (cmd === '/abonnés') {
+      setActiveTab('subscribers')
+      addLog('SYSTEM › Navigation vers la liste des abonnés...', 'neon')
+    } else if (cmd === '/services') {
+      setActiveTab('services')
+      addLog('SYSTEM › Navigation vers la gestion des services...', 'neon')
+    } else {
+      addLog(`ERREUR › Commande inconnue : ${cmd}. Tapez /aide pour la liste.`, 'red')
+    }
+
+    setCmdInput('')
+  }
 
   // Clock
   useEffect(() => {
@@ -360,18 +404,12 @@ export default function Home() {
           <div className="slabel">logs système</div>
           <div className="panel">
             <div className="ptitle"><span className="icon">📡</span> TERMINAL — LOGS EN TEMPS RÉEL</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, lineHeight: 1.8, maxHeight: 400, overflowY: 'auto' }}>
-              <div style={{ color: 'var(--silver)' }}>── PiRC2 Merchant Command Center v2.0 ──</div>
-              <div style={{ color: 'var(--silver)' }}>Contrat: CCDQOQKQA5OGBWD6UIAUPZRIGXJ3MC4GQ5BX3R4DNXKP3M6EYBVYKUE5</div>
-              <div style={{ color: 'var(--silver)' }}>Réseau: Pi Testnet · RPC: rpc.testnet.minepi.com</div>
-              <div style={{ color: 'var(--silver)' }}>─────────────────────────────────────────</div>
-              <div style={{ color: 'var(--neon)' }}>[08:00:00] AUTO › Traitement quotidien démarré</div>
-              <div style={{ color: 'var(--neon)' }}>[08:00:02] CONTRACT › process() appelé — limit: 50</div>
-              <div style={{ color: 'var(--neon)' }}>[08:00:04] SUCCESS › 38 paiements traités ✓</div>
-              <div style={{ color: 'var(--amber)' }}>[08:00:05] WARN › 3 abonnés en grace period</div>
-              <div style={{ color: 'var(--neon)' }}>[08:00:06] SUCCESS › Notifications envoyées ✓</div>
-              <div style={{ color: 'var(--silver)' }}>[14:29:12] USER › Tableau de bord ouvert</div>
-              <div style={{ color: 'var(--neon)' }}>[14:29:40] SYSTEM › Nouvelle connexion wallet détectée</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, lineHeight: 1.8, maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+              {logs.map((log, i) => (
+                <div key={i} style={{ color: `var(--${log.type === 'silver' ? 'silver' : log.type === 'neon' ? 'neon' : log.type === 'amber' ? 'amber' : log.type === 'red' ? 'red' : 'cyan'})` }}>
+                  {log.msg}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -385,6 +423,9 @@ export default function Home() {
           className="cmd-input"
           placeholder="Entrez une commande : /statut, /abonnés, /rapport, /service [nom] ..."
           autoComplete="off"
+          value={cmdInput}
+          onChange={(e) => setCmdInput(e.target.value)}
+          onKeyDown={handleCommand}
         />
         <span className="cmd-hint">↵ ENVOYER</span>
       </div>
