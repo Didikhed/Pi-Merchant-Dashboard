@@ -388,12 +388,15 @@ animate()
       setConnected(true)
       addLog(`SUCCESS › Connecté en tant que ${res.user.username}`, 'neon')
     } else {
-      // Fallback simulation pour le dev hors Pi Browser
-      setTimeout(() => { 
-        setConnecting(false)
-        setConnected(true) 
-        addLog('WARN › Mode simulation (SDK Pi non détecté)', 'amber')
-      }, 1500)
+      addLog(`ERREUR SDK › ${res.error}`, 'red')
+      // Fallback simulation pour le dev hors Pi Browser uniquement si SDK absent
+      if (res.error.includes('non trouvé')) {
+        setTimeout(() => { 
+          setConnecting(false)
+          setConnected(true) 
+          addLog('WARN › Mode simulation activé', 'amber')
+        }, 1500)
+      }
     }
     setConnecting(false)
   }
