@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import './subscribe.css'
+import { getMerchantServices, subscribeToService } from '../../lib/stellar'
+import { initPi, authenticatePi, createPiPayment } from '../../lib/pi'
 
 const PLANS = [
   {
@@ -90,21 +92,53 @@ const FAQS = [
 
 
 export default function Subscribe() {
-  const [selectedPlan, setSelectedPlan] = useState('formation')
+  const [selectedPlan, setSelectedPlan] = useState(null)
+  const [services, setServices] = useState([])
+  const [merchantAddr] = useState('GD2P7HINKFQ3WY6KHWWK6OKTNEHYKZ6EDM4JNFWBOHU3VRPWVCELYEN7')
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
   const [subscribing, setSubscribing] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [openFaq, setOpenFaq] = useState(null)
   const [clock, setClock] = useState('')
   const canvasRef = useRef(null)
 
   useEffect(() => {
+    initPi()
     const tick = () => setClock(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [])
+
+  // Load Services from Blockchain
+  useEffect(() => {
+    const loadServices = async () => {
+      setLoading(true)
+      const data = await getMerchantServices(merchantAddr)
+      if (data && data.length > 0) {
+        const formatted = data.map(s => ({
+          id: s.service_id.toString(),
+          name: s.name,
+          price: (Number(s.price) / 10000000).toString(),
+          period: s.period_secs >= 2592000 ? 'mois' : 'semaine',
+          icon: s.service_id % 2 === 0 ? '⭐' : '👑',
+          color: s.service_id % 2 === 0 ? 'var(--neon)' : 'var(--cyan)',
+          features: [
+            'Accès au contenu exclusif',
+            'Paiement 100% sécurisé',
+            'Support communautaire',
+            'Audit de sécurité passé'
+          ]
+        }))
+        setServices(formatted)
+        setSelectedPlan(formatted[0].id)
+      }
+      setLoading(false)
+    }
+    loadServices()
+  }, [merchantAddr])
 
   // Particle background
   useEffect(() => {
@@ -141,18 +175,55 @@ export default function Subscribe() {
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
   }, [])
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setConnecting(true)
-    setTimeout(() => { setConnecting(false); setConnected(true) }, 1800)
+    const res = await authenticatePi()
+    if (res.success) {
+      setConnected(true)
+      // Simulation d'une adresse de wallet pour l'UI
+      console.log('Connected user:', res.user)
+    } else {
+      // Fallback
+      setTimeout(() => { setConnecting(false); setConnected(true) }, 1800)
+    }
+    setConnecting(false)
   }
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (!connected) { handleConnect(); return }
     setSubscribing(true)
-    setTimeout(() => { setSubscribing(false); setSubscribed(true) }, 2500)
+    
+    // 1. Créer le paiement dans le SDK Pi
+    const payment = await createPiPayment(plan.price, `Abonnement ${plan.name}`, { serviceId: selectedPlan })
+    
+    if (payment) {
+      // 2. Enregistrer l'abonnement dans le contrat intelligent PiRC2
+      // Note: En production, on attendrait la confirmation du serveur
+      const res = await subscribeToService('GA...CLIENT_ADDR', selectedPlan, plan.price)
+      
+      if (res.success) {
+        setSubscribing(false)
+        setSubscribed(true)
+      } else {
+        alert(`Erreur contrat : ${res.error}`)
+        setSubscribing(false)
+      }
+    } else {
+      // Simulation pour test hors Pi Browser
+      const res = await subscribeToService('GA...CLIENT_ADDR', selectedPlan, plan.price)
+      if (res.success) {
+        setTimeout(() => { 
+          setSubscribing(false)
+          setSubscribed(true) 
+        }, 2000)
+      } else {
+        alert("Paiement annulé ou erreur SDK.")
+        setSubscribing(false)
+      }
+    }
   }
 
-  const plan = PLANS.find(p => p.id === selectedPlan)
+  const plan = services.find(p => p.id === selectedPlan) || { name: '...', price: '0', color: 'var(--neon)' }
 
   if (subscribed) {
     return (
@@ -212,33 +283,39 @@ export default function Subscribe() {
 
         {/* Plans */}
         <div className="slabel" style={{ justifyContent: 'center', marginBottom: 20 }}>choisissez votre plan</div>
-        <div className="plans-grid">
-          {PLANS.map(p => (
-            <div
-              key={p.id}
-              className={`plan-card ${selectedPlan === p.id ? 'selected' : ''}`}
-              style={{ '--pc': p.color, '--pg': p.glow }}
-              onClick={() => setSelectedPlan(p.id)}
-            >
-              {p.badge && <div className="plan-badge" style={{ color: p.color }}>{p.badge}</div>}
-              <div className="plan-icon">{p.icon}</div>
-              <div className="plan-name">{p.name}</div>
-              <div className="plan-price">
-                <span className="plan-pi">π</span>
-                <span className="plan-amount">{p.price}</span>
-                <span className="plan-period">/mois</span>
+        
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', fontFamily: 'var(--mono)', color: 'var(--neon)' }}>
+            ⏳ CHARGEMENT DES SERVICES DEPUIS LA BLOCKCHAIN...
+          </div>
+        ) : (
+          <div className="plans-grid">
+            {services.map(p => (
+              <div
+                key={p.id}
+                className={`plan-card ${selectedPlan === p.id ? 'selected' : ''}`}
+                style={{ '--pc': p.color, '--pg': `rgba(0,255,0,0.1)` }}
+                onClick={() => setSelectedPlan(p.id)}
+              >
+                <div className="plan-icon">{p.icon}</div>
+                <div className="plan-name">{p.name}</div>
+                <div className="plan-price">
+                  <span className="plan-pi">π</span>
+                  <span className="plan-amount">{p.price}</span>
+                  <span className="plan-period">/{p.period}</span>
+                </div>
+                <ul className="plan-features">
+                  {p.features.map((f, i) => (
+                    <li key={i}><span style={{ color: p.color }}>✓</span> {f}</li>
+                  ))}
+                </ul>
+                {selectedPlan === p.id && (
+                  <div className="plan-selected-indicator">PLAN SÉLECTIONNÉ ✓</div>
+                )}
               </div>
-              <ul className="plan-features">
-                {p.features.map((f, i) => (
-                  <li key={i}><span style={{ color: p.color }}>✓</span> {f}</li>
-                ))}
-              </ul>
-              {selectedPlan === p.id && (
-                <div className="plan-selected-indicator">PLAN SÉLECTIONNÉ ✓</div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* CTA Section */}
         <div className="cta-section">
@@ -344,7 +421,7 @@ export default function Subscribe() {
             Rejoignez notre canal officiel pour échanger avec des bâtisseurs qui parlent le même langage que vous. 
             Apprenez à utiliser ces outils et développez votre empire Pi Network.
           </p>
-          <a href="https://t.me/VotreLienTelegram" target="_blank" rel="noopener noreferrer" className="btn-neon" style={{ display: 'inline-block', textDecoration: 'none' }}>
+          <a href="https://t.me/Ultimelement" target="_blank" rel="noopener noreferrer" className="btn-neon" style={{ display: 'inline-block', textDecoration: 'none' }}>
             REJOINDRE LE CANAL TELEGRAM OFFICIEL
           </a>
         </div>

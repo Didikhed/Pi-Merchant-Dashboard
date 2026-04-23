@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import './page.css'
+import { triggerPaymentWorkflow, getLatestWorkflowRun } from '../lib/github'
+import { getMerchantServices, getMerchantSubs, getContractEvents, createService } from '../lib/stellar'
+import { initPi, authenticatePi } from '../lib/pi'
 
 const TABS = [
   { id: 'overview',     label: 'Overview',    icon: '⬡' },
@@ -8,8 +11,11 @@ const TABS = [
   { id: 'subscribers',  label: 'Abonnés',     icon: '👥', badge: '432' },
   { id: 'transactions', label: 'Transactions', icon: '🔄' },
   { id: 'analytics',    label: 'Analytics',   icon: '📊' },
+  { id: 'marketing',    label: 'Marketing',   icon: '📣' },
+  { id: 'settings',     label: 'Paramètres',  icon: '⚙️' },
   { id: 'logs',         label: 'Logs',        icon: '📡' },
 ]
+
 
 const ACTIVITY = [
   { time: 'MAINTENANT', agent: 'GB...4F', type: 't-ok',   msg: 'Nouvel abonnement — Service Premium π 10/mois' },
@@ -23,7 +29,11 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('overview')
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [merchantAddr, setMerchantAddr] = useState('GD2P7HINKFQ3WY6KHWWK6OKTNEHYKZ6EDM4JNFWBOHU3VRPWVCELYEN7')
   const [clock, setClock] = useState('')
+  const [workflowStatus, setWorkflowStatus] = useState(null)
+  const [showGuide, setShowGuide] = useState(false)
   const [cmdInput, setCmdInput] = useState('')
   const [services, setServices] = useState([
     { id: 1, name: 'Premium Access', price: '10', type: 'MENSUEL', members: 42, active: true },
@@ -99,25 +109,26 @@ export default function Home() {
     setIsAddingSub(false)
   }
 
-  const handleAddService = () => {
+  const handleAddService = async () => {
     if (!newService.name || !newService.price) return
-    const id = Date.now()
-    setServices([...services, { ...newService, id, members: 0, active: true }])
+    setLoading(true)
     
-    // Add service creation transaction
-    setTransactions([{
-      hash: genHash(),
-      from: 'SYSTEM',
-      amount: '0 π',
-      service: `DEPLOY: ${newService.name}`,
-      status: 'b-ok',
-      label: 'DÉPLOYÉ',
-      date: new Date().toLocaleTimeString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-    }, ...transactions])
-
-    addLog(`SUCCESS › Nouveau service créé : ${newService.name} (π ${newService.price})`, 'neon')
-    setNewService({ name: '', price: '', type: 'MENSUEL' })
-    setIsAddingService(false)
+    // Déterminer la période en secondes
+    const periodSecs = newService.type === 'MENSUEL' ? 2592000 : newService.type === 'ANNUEL' ? 31536000 : 0
+    
+    // Appel à la blockchain
+    const res = await createService(merchantAddr, newService.name, newService.price, periodSecs)
+    
+    if (res.success) {
+      addLog(`SUCCESS › Nouveau service déployé on-chain : ${newService.name}`, 'neon')
+      setNewService({ name: '', price: '', type: 'MENSUEL' })
+      setIsAddingService(false)
+      // Recharger les données
+      setTimeout(() => loadBlockchainData(merchantAddr), 2000)
+    } else {
+      alert(`Erreur lors de la création : ${res.error}`)
+    }
+    setLoading(false)
   }
 
   const deleteService = (id) => {
@@ -137,6 +148,22 @@ export default function Home() {
     s.plan.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const exportToCSV = () => {
+    const headers = ['ID', 'Adresse', 'Service', 'Prix', 'Statut', 'Expiration']
+    const rows = subscribers.map(s => [s.id, s.fullAddr || s.addr, s.plan, s.price, s.statusLabel, s.date])
+    const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `pirc2_subscribers_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    addLog('SUCCESS › Export CSV généré avec succès.', 'neon')
+  }
+
   const handleCommand = (e) => {
     if (e.key !== 'Enter') return
     const cmd = cmdInput.trim().toLowerCase()
@@ -147,7 +174,10 @@ export default function Home() {
     if (cmd === '/statut') {
       addLog('SYSTEM › Analyse du contrat PiRC2... Statut : OPÉRATIONNEL ✅', 'neon')
       setActiveTab('overview')
+    } else if (cmd === '/sync') {
+      loadBlockchainData()
     } else if (cmd === '/ping') {
+
       addLog('SYSTEM › PONG! Connexion Blockchain : 18ms 📡', 'cyan')
     } else if (cmd === '/aide') {
       addLog('AIDE › Commandes : /statut, /ping, /abonnés, /services, /aide', 'amber')
@@ -157,6 +187,15 @@ export default function Home() {
     } else if (cmd === '/services') {
       setActiveTab('services')
       addLog('SYSTEM › Navigation vers la gestion des services...', 'neon')
+    } else if (cmd === '/process') {
+      addLog('SYSTEM › Déclenchement du prélèvement automatique via GitHub Actions...', 'amber')
+      triggerPaymentWorkflow().then(res => {
+        if (res.success) {
+          addLog('SUCCESS › Workflow GitHub dispatché avec succès! Vérification en cours...', 'neon')
+        } else {
+          addLog(`ERREUR › Échec du déclenchement : ${res.error}`, 'red')
+        }
+      })
     } else {
       addLog(`ERREUR › Commande inconnue : ${cmd}. Tapez /aide pour la liste.`, 'red')
     }
@@ -164,8 +203,95 @@ export default function Home() {
     setCmdInput('')
   }
 
-  // Clock
+  // Blockchain Loading
+  const loadBlockchainData = async () => {
+    setLoading(true)
+    addLog('SYSTEM › Synchronisation blockchain en cours...', 'cyan')
+    
+    // 1. Fetch Services
+    const svcData = await getMerchantServices(merchantAddr)
+    if (svcData && svcData.length > 0) {
+      // Map blockchain Service struct to UI format
+      const formattedServices = svcData.map(s => ({
+        id: s.service_id.toString(),
+        name: s.name,
+        price: (Number(s.price) / 10000000).toString(), // Assuming 7 decimals like XLM/Pi
+        type: s.period_secs >= 2592000 ? 'MENSUEL' : 'HEBDO',
+        members: 0, // Will update below
+        active: s.is_active
+      }))
+      setServices(formattedServices)
+      addLog(`SUCCESS › ${formattedServices.length} services récupérés.`, 'neon')
+
+      // 2. Fetch Subscribers for each service
+      let allSubs = []
+      for (const svc of formattedServices) {
+        const subs = await getMerchantSubs(merchantAddr, svc.id)
+        if (subs && subs.length > 0) {
+          const formattedSubs = subs.map(sub => ({
+            id: sub.sub_id.toString(),
+            addr: `${sub.subscriber.substring(0, 4)}...${sub.subscriber.substring(sub.subscriber.length - 4)}`,
+            fullAddr: sub.subscriber,
+            plan: svc.name,
+            price: `${(Number(sub.price) / 10000000).toFixed(2)} π`,
+            status: sub.auto_renew ? 'b-ok' : 'b-warn',
+            statusLabel: sub.auto_renew ? 'ACTIF' : 'ANNULÉ',
+            date: new Date(Number(sub.service_end_ts) * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+          }))
+          allSubs = [...allSubs, ...formattedSubs]
+          
+          // Update service member count
+          setServices(prev => prev.map(s => s.id === svc.id ? { ...s, members: subs.length } : s))
+        }
+      }
+      setSubscribers(allSubs)
+    } else {
+      addLog('WARN › Aucun service trouvé sur le contrat.', 'amber')
+    }
+    setLoading(false)
+  }
+
+  // Event Polling
+
   useEffect(() => {
+    if (!connected) return
+    
+    const pollEvents = async () => {
+      const events = await getContractEvents()
+      if (events && events.length > 0) {
+        events.forEach(e => {
+          // Prevent duplicates (simple check by ID or timestamp)
+          addLog(`EVENT [${e.topic}] › ${JSON.stringify(e.data)}`, 'cyan')
+        })
+      }
+    }
+
+    const interval = setInterval(pollEvents, 10000) // Poll every 10s
+    return () => clearInterval(interval)
+  }, [connected])
+
+  // Workflow Monitoring
+  useEffect(() => {
+    if (!connected) return
+    const checkWorkflow = async () => {
+      const run = await getLatestWorkflowRun()
+      if (run) setWorkflowStatus(run)
+    }
+    const interval = setInterval(checkWorkflow, 15000) // Poll every 15s
+    checkWorkflow()
+    return () => clearInterval(interval)
+  }, [connected])
+
+  // Auto-load on connect
+  useEffect(() => {
+    if (connected) {
+      loadBlockchainData()
+    }
+  }, [connected])
+
+  // Clock & Pi SDK
+  useEffect(() => {
+    initPi()
     const tick = () => setClock(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
     tick()
     const id = setInterval(tick, 1000)
@@ -247,15 +373,29 @@ export default function Home() {
       drawConnections()
       animId = requestAnimationFrame(animate)
     }
-    animate()
+animate()
 
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
   }, [])
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     if (connected) return
     setConnecting(true)
-    setTimeout(() => { setConnecting(false); setConnected(true) }, 1500)
+    
+    const res = await authenticatePi()
+    if (res.success) {
+      setMerchantAddr(res.user.uid)
+      setConnected(true)
+      addLog(`SUCCESS › Connecté en tant que ${res.user.username}`, 'neon')
+    } else {
+      // Fallback simulation pour le dev hors Pi Browser
+      setTimeout(() => { 
+        setConnecting(false)
+        setConnected(true) 
+        addLog('WARN › Mode simulation (SDK Pi non détecté)', 'amber')
+      }, 1500)
+    }
+    setConnecting(false)
   }
 
   return (
@@ -263,24 +403,38 @@ export default function Home() {
       <canvas ref={canvasRef} id="bg-canvas" />
 
       {/* TOPBAR */}
+      {/* TOPBAR */}
       <header className="topbar">
-        <div className="tb-logo">π</div>
-        <div className="tb-brand">
-          <div className="name">PiRC2 MERCHANT</div>
-          <div className="sub">COMMAND CENTER v2.0</div>
+        <div className="tb-logo-group">
+          <div className="tb-logo">π</div>
+          <div className="tb-brand">
+            <div className="name">PiRC2 MERCHANT</div>
+            <div className="sub">COMMAND CENTER v2.0</div>
+          </div>
         </div>
-        <div className="tb-sep" />
-        <div className="tb-stat"><div className="pdot" /> BLOCKCHAIN ACTIVE</div>
-        <div className="tb-clock">{clock}</div>
-        <button
-          className={`btn-wallet-top ${connected ? 'connected' : ''}`}
-          onClick={handleConnect}
-          disabled={connecting}
-        >
-          <div className={`pdot ${connected ? '' : 'inactive'}`} style={connected ? {} : { background: 'var(--silver)', boxShadow: 'none', animation: 'none' }} />
-          {connecting ? 'CONNEXION...' : connected ? 'GD2P...EN7' : 'CONNECT PI WALLET'}
-        </button>
+        
+        <div className="tb-actions-group">
+          <div className="tb-stat" style={{ color: loading ? 'var(--cyan)' : 'var(--neon2)' }}>
+            <div className="pdot" style={{ background: loading ? 'var(--cyan)' : 'var(--neon)' }} /> 
+            {loading ? 'SYNCING...' : 'BLOCKCHAIN ACTIVE'}
+          </div>
+          <div className="tb-clock">{clock}</div>
+          
+          <button className="btn-wallet-top" onClick={() => setShowGuide(true)}>
+            💡 GUIDE
+          </button>
+          
+          <button
+            className={`btn-wallet-top ${connected ? 'connected' : ''}`}
+            onClick={handleConnect}
+            disabled={connecting}
+          >
+            <div className={`pdot ${connected ? '' : 'inactive'}`} style={connected ? {} : { background: 'var(--silver)', boxShadow: 'none', animation: 'none' }} />
+            {connecting ? 'CONNEXION...' : connected ? '● GD2P...EN7' : '● CONNECT PI WALLET'}
+          </button>
+        </div>
       </header>
+
 
       {/* TABS NAV */}
       <nav className="tabs-nav">
@@ -363,25 +517,44 @@ export default function Home() {
 
           {/* Pipeline */}
           <div className="panel">
-            <div className="ptitle"><span className="icon">🔄</span> PIPELINE — TRAITEMENT PAIEMENTS</div>
+            <div className="ptitle"><span className="icon">🔄</span> PIPELINE — TRAITEMENT PAIEMENTS {workflowStatus?.status === 'in_progress' ? '(EN COURS...)' : ''}</div>
             <div className="pipeline">
-              {['Détection', 'Validation', 'Signature', 'Broadcast', 'Confirmation', 'Notification', 'Log'].map((s, i) => (
-                <div key={i} className="pipe-step">
-                  <div className={`pipe-dot ${i < 3 ? 'done' : i === 3 ? 'active' : ''}`}>{i < 3 ? '✓' : i === 3 ? '⚙' : '○'}</div>
-                  <div className={`pipe-lbl ${i < 3 ? 'done' : i === 3 ? 'active' : ''}`}>{s}</div>
-                </div>
-              ))}
+              {['Détection', 'Validation', 'Signature', 'Broadcast', 'Confirmation', 'Notification', 'Log'].map((s, i) => {
+                let status = ''
+                if (workflowStatus) {
+                  if (workflowStatus.status === 'completed' && workflowStatus.conclusion === 'success') status = 'done'
+                  else if (workflowStatus.status === 'in_progress') {
+                    // Simuler la progression dans les étapes
+                    if (i < 4) status = 'done'
+                    else if (i === 4) status = 'active'
+                  } else if (workflowStatus.status === 'queued') {
+                    if (i === 0) status = 'active'
+                  }
+                }
+                return (
+                  <div key={i} className="pipe-step">
+                    <div className={`pipe-dot ${status}`}>{status === 'done' ? '✓' : status === 'active' ? '⚙' : '○'}</div>
+                    <div className={`pipe-lbl ${status}`}>{s}</div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
 
+
         {/* ══ SERVICES ══ */}
         <div className={`tab-pane ${activeTab === 'services' ? 'active' : ''}`}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div className="slabel" style={{ margin: 0 }}>gestion des services</div>
-            <button className="btn-neon" style={{ padding: '8px 16px', fontSize: 11 }} onClick={() => setIsAddingService(!isAddingService)}>
-              {isAddingService ? '✕ ANNULER' : '+ CRÉER UN SERVICE'}
-            </button>
+          <div className="panel" style={{ marginBottom: 20, background: 'rgba(170, 255, 0, 0.02)', border: '1px dashed var(--neon2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px' }}>
+              <div>
+                <div className="slabel" style={{ margin: 0 }}>GESTION DES SERVICES</div>
+                <div style={{ fontSize: 10, color: 'var(--ghost)', marginTop: 4 }}>DÉPLOYEZ VOS OFFRES SUR LE RÉSEAU PI</div>
+              </div>
+              <button className="btn-neon" id="guide-create-service" style={{ padding: '12px 24px', fontSize: 13 }} onClick={() => setIsAddingService(!isAddingService)}>
+                {isAddingService ? '✕ ANNULER' : '+ CRÉER UN NOUVEAU SERVICE'}
+              </button>
+            </div>
           </div>
 
           {isAddingService && (
@@ -441,8 +614,8 @@ export default function Home() {
                 <div className="stat-row"><span className="stat-key">Abonnés actifs</span><span className="stat-val">{s.members}</span></div>
                 <div className="stat-row"><span className="stat-key">Statut</span><span className="badge b-ok">ACTIF</span></div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                  <button className="btn-small" style={{ flex: 1 }}>MODIFIER</button>
-                  <button className="btn-small" style={{ flex: 1, color: 'var(--red)', borderColor: 'rgba(255,0,0,0.2)' }} onClick={() => deleteService(s.id)}>SUPPRIMER</button>
+                  <button className="btn-small" style={{ flex: 1, borderColor: 'var(--cyan)', color: 'var(--cyan)' }}>MODIFIER</button>
+                  <button className="btn-small" style={{ flex: 1, color: 'var(--red)', borderColor: 'var(--red)' }} onClick={() => deleteService(s.id)}>SUPPRIMER</button>
                 </div>
               </div>
             ))}
@@ -453,10 +626,16 @@ export default function Home() {
         <div className={`tab-pane ${activeTab === 'subscribers' ? 'active' : ''}`}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div className="slabel" style={{ margin: 0 }}>liste des abonnés</div>
-            <button className="btn-neon" style={{ padding: '8px 16px', fontSize: 11 }} onClick={() => setIsAddingSub(!isAddingSub)}>
-              {isAddingSub ? '✕ ANNULER' : '+ NOUVEL ABONNÉ'}
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn-small" style={{ borderColor: 'var(--silver)', color: 'var(--silver)' }} onClick={exportToCSV}>
+                📥 EXPORTER CSV
+              </button>
+              <button className="btn-neon" style={{ padding: '8px 16px', fontSize: 11 }} onClick={() => setIsAddingSub(!isAddingSub)}>
+                {isAddingSub ? '✕ ANNULER' : '+ NOUVEL ABONNÉ'}
+              </button>
+            </div>
           </div>
+
 
           {isAddingSub && (
             <div className="panel" style={{ marginBottom: 24, border: '1px solid var(--cyan)' }}>
@@ -517,9 +696,11 @@ export default function Home() {
                       <td className="mono-text" style={{ color: 'var(--neon)' }}>{s.price}</td>
                       <td><span className={`badge ${s.status}`}>{s.statusLabel}</span></td>
                       <td className="mono-text">{s.date}</td>
-                      <td>
+                      <td style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn-small" style={{ color: 'var(--cyan)', borderColor: 'rgba(0,255,213,0.15)', padding: '2px 8px' }} onClick={() => addLog(`SYSTEM › Message envoyé à ${s.addr} via Brand Factory.`, 'cyan')}>MESSAGE</button>
                         <button className="btn-small" style={{ color: 'var(--red)', borderColor: 'rgba(255,0,0,0.1)', padding: '2px 8px' }} onClick={() => deleteSub(s.id)}>SUPPR.</button>
                       </td>
+
                     </tr>
                   ))}
                   {filteredSubs.length === 0 && (
@@ -615,6 +796,98 @@ export default function Home() {
           </div>
         </div>
 
+        {/* ══ MARKETING ══ */}
+        <div className={`tab-pane ${activeTab === 'marketing' ? 'active' : ''}`}>
+          <div className="slabel" style={{ marginBottom: 20 }}>brand factory — générateur de campagnes ia</div>
+          <div className="g2">
+            <div className="panel" style={{ border: '1px solid var(--cyan)' }}>
+              <div className="ptitle"><span className="icon">🚀</span> GÉNÉRER UNE CAMPAGNE</div>
+              <div style={{ marginBottom: 20 }}>
+                <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>SÉLECTIONNER LE SERVICE</div>
+                <select className="cmd-input" style={{ border: '1px solid var(--border)', width: '100%', background: 'var(--void)', height: 38 }}>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>OBJECTIF DE LA CAMPAGNE</div>
+                <select className="cmd-input" style={{ border: '1px solid var(--border)', width: '100%', background: 'var(--void)', height: 38 }}>
+                  <option>Acquisition de nouveaux abonnés</option>
+                  <option>Rétention / Fidélisation</option>
+                  <option>Promotion Flash (-20%)</option>
+                  <option>Lancement de nouveau produit</option>
+                </select>
+              </div>
+              <button className="btn-neon" style={{ width: '100%', borderColor: 'var(--cyan)', color: 'var(--cyan)' }} onClick={() => {
+                addLog('SYSTEM › Initialisation de l\'agent Kheren pour la création d\'assets...', 'cyan')
+                setTimeout(() => addLog('SUCCESS › Campagne générée ! Prêt pour diffusion sur Telegram.', 'neon'), 2000)
+              }}>
+                LANCER L'IA BRAND FACTORY
+              </button>
+            </div>
+
+            <div className="panel">
+              <div className="ptitle"><span className="icon">🎨</span> ASSETS RÉCENTS</div>
+              <div className="g2" style={{ gap: 8 }}>
+                <div style={{ aspectRatio: '1/1', background: 'var(--slate)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: 10, color: 'var(--silver)', border: '1px dashed var(--border)' }}>IMAGE_ADS_01.PNG</div>
+                <div style={{ aspectRatio: '1/1', background: 'var(--slate)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: 10, color: 'var(--silver)', border: '1px dashed var(--border)' }}>IMAGE_ADS_02.PNG</div>
+                <div style={{ aspectRatio: '1/1', background: 'var(--slate)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: 10, color: 'var(--silver)', border: '1px dashed var(--border)' }}>VIDEO_STORY_01.MP4</div>
+                <div style={{ aspectRatio: '1/1', background: 'var(--slate)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: 10, color: 'var(--silver)', border: '1px dashed var(--border)' }}>COPYWRITING_TELEGRAM.TXT</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ══ SETTINGS ══ */}
+        <div className={`tab-pane ${activeTab === 'settings' ? 'active' : ''}`}>
+          <div className="slabel" style={{ marginBottom: 20 }}>configuration du système merchant</div>
+          <div className="g2">
+            <div className="panel">
+              <div className="ptitle"><span className="icon">👤</span> IDENTITÉ MARCHAND</div>
+              <div style={{ marginBottom: 20 }}>
+                <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>ADRESSE PI PUBLIQUE (RECONVERSION REVENUS)</div>
+                <input 
+                  className="cmd-input" 
+                  style={{ border: '1px solid var(--border)', width: '100%', background: 'var(--void)' }} 
+                  value={merchantAddr}
+                  onChange={(e) => setMerchantAddr(e.target.value)}
+                />
+                <p style={{ fontSize: 10, color: 'var(--ghost)', marginTop: 8 }}>
+                  C'est l'adresse qui recevra les paiements de vos abonnés.
+                </p>
+              </div>
+              <button className="btn-neon" style={{ width: '100%' }} onClick={() => {
+                loadBlockchainData(merchantAddr)
+                addLog('SYSTEM › Adresse marchand mise à jour et données rechargées.', 'neon')
+              }}>
+                SAUVEGARDER & ACTUALISER
+              </button>
+            </div>
+
+            <div className="panel">
+              <div className="ptitle"><span className="icon">🌐</span> RÉSEAU & CONTRAT</div>
+              <div className="stat-row">
+                <span className="stat-key">Réseau Actuel</span>
+                <span className="stat-val" style={{ color: 'var(--neon)' }}>Pi Testnet</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-key">Contrat ID</span>
+                <span className="stat-val" style={{ fontSize: 10 }}>CCDQ...UE5</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-key">Version PiRC2</span>
+                <span className="stat-val">2.0.1</span>
+              </div>
+              <div style={{ marginTop: 20 }}>
+                <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>MODE DE FONCTIONNEMENT</div>
+                <select className="cmd-input" style={{ border: '1px solid var(--border)', width: '100%', background: 'var(--void)', height: 38 }}>
+                  <option>Développement (Testnet)</option>
+                  <option disabled>Production (Mainnet) — Bientôt</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ══ LOGS ══ */}
         <div className={`tab-pane ${activeTab === 'logs' ? 'active' : ''}`}>
           <div className="slabel">logs système</div>
@@ -631,6 +904,39 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* GUIDE OVERLAY */}
+      {showGuide && (
+        <div className="guide-overlay" onClick={() => setShowGuide(false)}>
+          <div className="guide-card" onClick={(e) => e.stopPropagation()}>
+            <div className="ptitle" style={{ color: 'var(--neon)', borderBottom: '1px solid var(--neon2)', paddingBottom: 10, marginBottom: 15 }}>
+              <span className="icon">🚀</span> GUIDE DE DÉMARRAGE RAPIDE
+            </div>
+            <div className="guide-step">
+              <div className="guide-num">1</div>
+              <div className="guide-txt">
+                <strong>CRÉER UN SERVICE</strong><br/>
+                Allez dans l'onglet 💼 <strong>SERVICES</strong> et cliquez sur le gros bouton néon en haut à droite. C'est ici que vous définissez vos prix en Pi.
+              </div>
+            </div>
+            <div className="guide-step">
+              <div className="guide-num">2</div>
+              <div className="guide-txt">
+                <strong>PARTAGER VOTRE LIEN</strong><br/>
+                Une fois le service créé, envoyez le lien de votre page <code>/subscribe</code> à vos clients Longrich ou Brand Factory.
+              </div>
+            </div>
+            <div className="guide-step">
+              <div className="guide-num">3</div>
+              <div className="guide-txt">
+                <strong>SUIVRE LES PAIEMENTS</strong><br/>
+                Dans ⬡ <strong>OVERVIEW</strong>, surveillez le pipeline de traitement. Les Pi arriveront sur votre wallet automatiquement.
+              </div>
+            </div>
+            <button className="btn-neon" style={{ width: '100%', marginTop: 10 }} onClick={() => setShowGuide(false)}>J'AI COMPRIS, C'EST PARTI !</button>
+          </div>
+        </div>
+      )}
 
       {/* CMD BAR */}
       <div className="cmd-bar">

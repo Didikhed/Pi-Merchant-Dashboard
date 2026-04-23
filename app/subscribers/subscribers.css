@@ -152,7 +152,8 @@
   /* Scrollable table on mobile */
   .subs-table-container {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    /* removed deprecated -webkit-overflow-scrolling */
+  overflow-y: auto;
     border-radius: 14px;
   }
   .subs-table {
