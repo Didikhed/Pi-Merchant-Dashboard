@@ -25,22 +25,39 @@ export default function Home() {
   const [connecting, setConnecting] = useState(false)
   const [clock, setClock] = useState('')
   const [cmdInput, setCmdInput] = useState('')
+  const [services, setServices] = useState([
+    { id: 1, name: 'Premium Access', price: '10', type: 'MENSUEL', members: 42, active: true },
+    { id: 2, name: 'Formation Business', price: '25', type: 'UNIQUE', members: 12, active: true },
+    { id: 3, name: 'Coaching VIP', price: '50', type: 'ANNUEL', members: 5, active: true },
+  ])
+  const [isAddingService, setIsAddingService] = useState(false)
+  const [newService, setNewService] = useState({ name: '', price: '', type: 'MENSUEL' })
   const [logs, setLogs] = useState([
     { type: 'silver', msg: '── PiRC2 Merchant Command Center v2.0 ──' },
     { type: 'silver', msg: 'Contrat: CCDQOQKQA5OGBWD6UIAUPZRIGXJ3MC4GQ5BX3R4DNXKP3M6EYBVYKUE5' },
     { type: 'silver', msg: 'Réseau: Pi Testnet · RPC: rpc.testnet.minepi.com' },
     { type: 'silver', msg: '─────────────────────────────────────────' },
-    { type: 'neon',   msg: '[08:00:00] AUTO › Traitement quotidien démarré' },
-    { type: 'neon',   msg: '[08:00:02] CONTRACT › process() appelé — limit: 50' },
-    { type: 'neon',   msg: '[08:00:04] SUCCESS › 38 paiements traités ✓' },
-    { type: 'amber',  msg: '[08:00:05] WARN › 3 abonnés en grace period' },
-    { type: 'neon',   msg: '[08:00:06] SUCCESS › Notifications envoyées ✓' },
   ])
   const canvasRef = useRef(null)
 
   const addLog = (msg, type = 'neon') => {
     const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     setLogs(prev => [...prev, { type, msg: `[${time}] ${msg}` }])
+  }
+
+  const handleAddService = () => {
+    if (!newService.name || !newService.price) return
+    const id = Date.now()
+    setServices([...services, { ...newService, id, members: 0, active: true }])
+    addLog(`SUCCESS › Nouveau service créé : ${newService.name} (π ${newService.price})`, 'neon')
+    setNewService({ name: '', price: '', type: 'MENSUEL' })
+    setIsAddingService(false)
+  }
+
+  const deleteService = (id) => {
+    const s = services.find(x => x.id === id)
+    setServices(services.filter(x => x.id !== id))
+    addLog(`WARN › Service supprimé : ${s.name}`, 'amber')
   }
 
   const handleCommand = (e) => {
@@ -208,32 +225,32 @@ export default function Home() {
 
         {/* ══ OVERVIEW ══ */}
         <div className={`tab-pane ${activeTab === 'overview' ? 'active' : ''}`}>
-          <div className="slabel">métriques globales</div>
+          <div className="slabel">vision d'ensemble</div>
           <div className="g6" style={{ marginBottom: 14 }}>
             <div className="kpi" style={{ '--kc': 'var(--neon)' }}>
-              <div className="kpi-label">Revenus Total</div>
-              <div className="kpi-val">12540</div>
-              <div className="kpi-delta up">▲ +12.5% ce mois</div>
+              <div className="kpi-label">Revenus Total (π)</div>
+              <div className="kpi-val">{services.reduce((acc, s) => acc + (Number(s.price) * s.members), 0)}</div>
+              <div className="kpi-delta up">▲ Estimation mensuelle</div>
             </div>
             <div className="kpi" style={{ '--kc': 'var(--cyan)' }}>
               <div className="kpi-label">Abonnés Actifs</div>
-              <div className="kpi-val">432</div>
-              <div className="kpi-delta up">▲ +8.2% vs mois dernier</div>
+              <div className="kpi-val">{services.reduce((acc, s) => acc + s.members, 0)}</div>
+              <div className="kpi-delta up">▲ Utilisateurs réels</div>
             </div>
             <div className="kpi" style={{ '--kc': 'var(--amber)' }}>
-              <div className="kpi-label">Volume 24h (π)</div>
-              <div className="kpi-val">185</div>
-              <div className="kpi-delta down">▼ -2.4% aujourd'hui</div>
+              <div className="kpi-label">Services Actifs</div>
+              <div className="kpi-val">{services.length}</div>
+              <div className="kpi-delta flat">— Contrats activés</div>
             </div>
             <div className="kpi" style={{ '--kc': 'var(--neon)' }}>
-              <div className="kpi-label">Services Actifs</div>
-              <div className="kpi-val">3</div>
-              <div className="kpi-delta flat">— stable</div>
-            </div>
-            <div className="kpi" style={{ '--kc': 'var(--amber)' }}>
               <div className="kpi-label">Taux Succès</div>
               <div className="kpi-val">97%</div>
-              <div className="kpi-delta up">▲ +3% vs sem. dernière</div>
+              <div className="kpi-delta up">▲ Blockchain Stable</div>
+            </div>
+            <div className="kpi" style={{ '--kc': 'var(--cyan)' }}>
+              <div className="kpi-label">Connectivité</div>
+              <div className="kpi-val">ON</div>
+              <div className="kpi-delta flat">— Pi RPC v2</div>
             </div>
             <div className="kpi" style={{ '--kc': 'var(--neon3)' }}>
               <div className="kpi-label">Contrat ID</div>
@@ -281,20 +298,73 @@ export default function Home() {
 
         {/* ══ SERVICES ══ */}
         <div className={`tab-pane ${activeTab === 'services' ? 'active' : ''}`}>
-          <div className="slabel">services marchands</div>
-          <div className="g3" style={{ marginBottom: 14 }}>
-            {[
-              { name: 'Accès Premium', price: '10 π/mois', subs: 280, status: 'ACTIF', color: 'var(--neon)' },
-              { name: 'Formation Business', price: '25 π/mois', subs: 112, status: 'ACTIF', color: 'var(--cyan)' },
-              { name: 'Coaching VIP', price: '50 π/mois', subs: 40, status: 'ACTIF', color: 'var(--amber)' },
-            ].map((s, i) => (
-              <div key={i} className="panel">
-                <div className="ptitle" style={{ color: s.color }}><span className="icon">💼</span> SERVICE {String(i + 1).padStart(2, '0')}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="slabel" style={{ margin: 0 }}>gestion des services</div>
+            <button className="btn-neon" style={{ padding: '8px 16px', fontSize: 11 }} onClick={() => setIsAddingService(!isAddingService)}>
+              {isAddingService ? '✕ ANNULER' : '+ CRÉER UN SERVICE'}
+            </button>
+          </div>
+
+          {isAddingService && (
+            <div className="panel" style={{ marginBottom: 24, border: '1px solid var(--neon2)' }}>
+              <div className="ptitle"><span className="icon">✨</span> NOUVEAU SERVICE MARCHAND</div>
+              <div className="g3" style={{ gap: 16 }}>
+                <div>
+                  <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>NOM DU SERVICE</div>
+                  <input
+                    className="cmd-input"
+                    style={{ border: '1px solid var(--border)', width: '100%', background: 'rgba(255,255,255,0.02)' }}
+                    placeholder="ex: Formation Coaching"
+                    value={newService.name}
+                    onChange={(e) => setNewService({ ...newService, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>PRIX (π)</div>
+                  <input
+                    className="cmd-input"
+                    type="number"
+                    style={{ border: '1px solid var(--border)', width: '100%', background: 'rgba(255,255,255,0.02)' }}
+                    placeholder="ex: 15"
+                    value={newService.price}
+                    onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <div className="mono-text" style={{ fontSize: 10, marginBottom: 8 }}>TYPE</div>
+                  <select
+                    className="cmd-input"
+                    style={{ border: '1px solid var(--border)', width: '100%', background: 'var(--void)', height: 38 }}
+                    value={newService.type}
+                    onChange={(e) => setNewService({ ...newService, type: e.target.value })}
+                  >
+                    <option value="MENSUEL">MENSUEL</option>
+                    <option value="ANNUEL">ANNUEL</option>
+                    <option value="UNIQUE">UNIQUE</option>
+                  </select>
+                </div>
+              </div>
+              <button className="btn-neon" style={{ marginTop: 20, width: '100%' }} onClick={handleAddService}>
+                DÉPLOYER LE SERVICE SUR LA BLOCKCHAIN PI
+              </button>
+            </div>
+          )}
+
+          <div className="g3">
+            {services.map((s, i) => (
+              <div key={s.id} className="panel service-card" style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div className="mono-text" style={{ fontSize: 10, color: i === 0 ? 'var(--neon)' : i === 1 ? 'var(--cyan)' : 'var(--amber)', letterSpacing: 2 }}>{s.type}</div>
+                  <div className="pdot" style={{ background: s.active ? 'var(--neon)' : 'var(--red)' }} />
+                </div>
                 <div style={{ fontFamily: 'var(--display)', fontSize: 22, color: 'var(--white)', marginBottom: 4 }}>{s.name}</div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: s.color, marginBottom: 12 }}>{s.price}</div>
-                <div className="stat-row"><span className="stat-key">Abonnés actifs</span><span className="stat-val" style={{ color: s.color }}>{s.subs}</span></div>
-                <div className="stat-row"><span className="stat-key">Statut</span><span className="badge b-ok">{s.status}</span></div>
-                <div className="stat-row"><span className="stat-key">Renouvellement</span><span className="stat-val">AUTO</span></div>
+                <div style={{ fontFamily: 'var(--display)', fontSize: 32, color: i === 0 ? 'var(--neon)' : i === 1 ? 'var(--cyan)' : 'var(--amber)', marginBottom: 16 }}>π {s.price}</div>
+                <div className="stat-row"><span className="stat-key">Abonnés actifs</span><span className="stat-val">{s.members}</span></div>
+                <div className="stat-row"><span className="stat-key">Statut</span><span className="badge b-ok">ACTIF</span></div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                  <button className="btn-small" style={{ flex: 1 }}>MODIFIER</button>
+                  <button className="btn-small" style={{ flex: 1, color: 'var(--red)', borderColor: 'rgba(255,0,0,0.2)' }} onClick={() => deleteService(s.id)}>SUPPRIMER</button>
+                </div>
               </div>
             ))}
           </div>
