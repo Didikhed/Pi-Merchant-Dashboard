@@ -8,20 +8,14 @@ export default function PiProvider() {
       strategy="afterInteractive"
       onLoad={() => {
         if (typeof window !== 'undefined' && window.Pi) {
-          console.log("[PiProvider] SDK chargé. Tentative d'initialisation...");
           try {
-            // On tente d'abord l'initialisation standard (Mainnet)
-            window.Pi.init({ version: "2.0" });
-            console.log("[PiProvider] Initialisé en mode Mainnet.");
+            // Détection automatique du mode sandbox basé sur l'URL
+            const isSandbox = window.location.hostname.includes('sandbox') || window.location.hostname.includes('localhost');
+            window.Pi.init({ version: "2.0", sandbox: isSandbox });
+            window.__piInitialized = true;
+            console.log("[Pi SDK] Initialisé avec succès. Mode Sandbox:", isSandbox);
           } catch (e) {
-            console.warn("[PiProvider] Échec Mainnet, tentative Sandbox...", e);
-            try {
-              // Fallback pour le Sandbox
-              window.Pi.init({ version: "2.0", sandbox: true });
-              console.log("[PiProvider] Initialisé en mode Sandbox.");
-            } catch (e2) {
-              console.error("[PiProvider] Échec total de l'initialisation", e2);
-            }
+            console.error("[Pi SDK] Erreur init:", e);
           }
         }
       }}

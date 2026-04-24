@@ -65,6 +65,28 @@ export default function Home() {
     setLogs(prev => [...prev, { type, msg: `[${time}] ${msg}` }])
   }
 
+  // Détection de l'initialisation du SDK Pi
+  useEffect(() => {
+    const checkInit = setInterval(() => {
+      if (typeof window !== 'undefined' && window.__piInitialized) {
+        addLog('SYSTEM › SDK Pi détecté et prêt.', 'neon')
+        clearInterval(checkInit)
+      }
+    }, 1000)
+    return () => clearInterval(checkInit)
+  }, [])
+
+  // Horloge système
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date()
+      setClock(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+    }
+    updateClock()
+    const timer = setInterval(updateClock, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   const [transactions, setTransactions] = useState([
     { hash: 'CCDQ...UE5', from: 'GB...4F', amount: '10 π', service: 'Premium Access', status: 'b-ok', label: 'CONFIRMÉ', date: '23/04 14:29' },
     { hash: 'CCDQ...3K2', from: 'GA...2X', amount: '25 π', service: 'Formation Business', status: 'b-ok', label: 'CONFIRMÉ', date: '23/04 09:15' },
@@ -471,7 +493,13 @@ animate()
               <div className="kpi-val">{services.length}</div>
               <div className="kpi-delta flat">— Contrats activés</div>
             </div>
-            {/* ... kpis restants ... */}
+            </div>
+            <div className="kpi" style={{ '--kc': 'var(--neon)' }}>
+              <div className="kpi-label">Taux Succès</div>
+              <div className="kpi-val">97%</div>
+              <div className="kpi-delta flat">— Transactions stables</div>
+            </div>
+          </div>
             <div className="kpi" style={{ '--kc': 'var(--neon)' }}>
               <div className="kpi-label">Taux Succès</div>
               <div className="kpi-val">97%</div>
