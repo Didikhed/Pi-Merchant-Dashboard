@@ -1,4 +1,5 @@
 import './globals.css'
+import PiProvider from '../components/PiProvider'
 
 export const metadata = {
   title: 'PiRC2 Merchant — Command Center',
@@ -8,29 +9,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
-      <head>
-        {/* APPROCHE ARCHITECTURALE PURE : Chargement natif et synchrone (bloquant) */}
-        {/* 1. On force le navigateur à télécharger le SDK Pi avant d'afficher quoi que ce soit */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-        
-        {/* 2. On initialise le SDK Pi immédiatement dans le thread principal */}
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            try {
-              if (typeof window !== 'undefined' && window.Pi) {
-                // IMPORTANT: On supprime sandbox: true car sur le Pi Browser public (Mainnet), 
-                // le mode sandbox est bloqué et fait échouer silencieusement l'initialisation.
-                window.Pi.init({ version: "2.0" });
-                console.log("[Pi Architecture] SDK Initialisé en mode Mainnet (Production).");
-              }
-            } catch (e) {
-              console.error("[Pi Architecture] Erreur critique d'initialisation :", e);
-            }
-          `
-        }}></script>
-      </head>
       <body>
+        <PiProvider />
         <div className="grid-overlay"></div>
         <div className="scan-lines"></div>
         <div className="vignette"></div>
