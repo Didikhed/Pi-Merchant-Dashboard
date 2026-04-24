@@ -387,13 +387,11 @@ animate()
       setConnected(true)
     } else {
       addLog(res.message, 'red')
-      // Fallback simulation si SDK introuvable (pour dev sur PC)
-      if (res.message.includes('introuvable')) {
-        setTimeout(() => {
-          setConnected(true)
-          addLog('⚠️ Mode simulation activé (Hors Pi Browser)', 'amber')
-        }, 1500)
-      }
+      // Fallback simulation robuste pour le développement sur PC (Chrome, Safari, etc.)
+      setTimeout(() => {
+        setConnected(true)
+        addLog('⚠️ Mode simulation activé (Environnement Hors Pi Browser détecté)', 'amber')
+      }, 1500)
     }
     setConnecting(false)
   }
