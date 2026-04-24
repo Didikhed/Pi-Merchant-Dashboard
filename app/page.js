@@ -3,8 +3,6 @@ import { useState, useEffect, useRef } from 'react'
 import './page.css'
 import { triggerPaymentWorkflow, getLatestWorkflowRun } from '../lib/github'
 import { getMerchantServices, getMerchantSubs, getContractEvents, createService } from '../lib/stellar'
-import { initPi, authenticatePi } from '../lib/pi'
-
 const TABS = [
   { id: 'overview',     label: 'Overview',    icon: '⬡' },
   { id: 'services',     label: 'Services',    icon: '💼', badge: '3' },
@@ -289,9 +287,8 @@ export default function Home() {
     }
   }, [connected])
 
-  // Clock & Pi SDK
+  // Clock
   useEffect(() => {
-    initPi()
     const tick = () => setClock(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
     tick()
     const id = setInterval(tick, 1000)
@@ -378,27 +375,16 @@ animate()
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
   }, [])
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     if (connected) return
     setConnecting(true)
     
-    const res = await authenticatePi()
-    if (res.success) {
-      setMerchantAddr(res.user.uid)
-      setConnected(true)
-      addLog(`SUCCESS › Connecté en tant que ${res.user.username}`, 'neon')
-    } else {
-      addLog(`ERREUR SDK › ${res.error}`, 'red')
-      // Fallback simulation pour le dev hors Pi Browser uniquement si SDK absent
-      if (res.error.includes('non trouvé')) {
-        setTimeout(() => { 
-          setConnecting(false)
-          setConnected(true) 
-          addLog('WARN › Mode simulation activé', 'amber')
-        }, 1500)
-      }
-    }
-    setConnecting(false)
+    // Simulation connexion
+    setTimeout(() => { 
+      setConnecting(false)
+      setConnected(true) 
+      addLog('SUCCESS › Portefeuille marchand connecté (Simulation)', 'neon')
+    }, 1500)
   }
 
   return (

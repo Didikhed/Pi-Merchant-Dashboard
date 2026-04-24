@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react'
 import './subscribe.css'
 import { getMerchantServices, subscribeToService } from '../../lib/stellar'
-import { initPi, authenticatePi, createPiPayment } from '../../lib/pi'
 
 const PLANS = [
   {
@@ -105,7 +104,6 @@ export default function Subscribe() {
   const canvasRef = useRef(null)
 
   useEffect(() => {
-    initPi()
     const tick = () => setClock(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
     tick()
     const id = setInterval(tick, 1000)
@@ -175,51 +173,26 @@ export default function Subscribe() {
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
   }, [])
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     setConnecting(true)
-    const res = await authenticatePi()
-    if (res.success) {
-      setConnected(true)
-      // Simulation d'une adresse de wallet pour l'UI
-      console.log('Connected user:', res.user)
-    } else {
-      // Fallback
-      setTimeout(() => { setConnecting(false); setConnected(true) }, 1800)
-    }
-    setConnecting(false)
+    setTimeout(() => { setConnecting(false); setConnected(true) }, 1800)
   }
 
   const handleSubscribe = async () => {
     if (!connected) { handleConnect(); return }
     setSubscribing(true)
     
-    // 1. Créer le paiement dans le SDK Pi
-    const payment = await createPiPayment(plan.price, `Abonnement ${plan.name}`, { serviceId: selectedPlan })
+    // Appel réel à la blockchain
+    const res = await subscribeToService('GA...CLIENT_ADDR', selectedPlan, plan.price)
     
-    if (payment) {
-      // 2. Enregistrer l'abonnement dans le contrat intelligent PiRC2
-      // Note: En production, on attendrait la confirmation du serveur
-      const res = await subscribeToService('GA...CLIENT_ADDR', selectedPlan, plan.price)
-      
-      if (res.success) {
+    if (res.success) {
+      setTimeout(() => { 
         setSubscribing(false)
-        setSubscribed(true)
-      } else {
-        alert(`Erreur contrat : ${res.error}`)
-        setSubscribing(false)
-      }
+        setSubscribed(true) 
+      }, 1500)
     } else {
-      // Simulation pour test hors Pi Browser
-      const res = await subscribeToService('GA...CLIENT_ADDR', selectedPlan, plan.price)
-      if (res.success) {
-        setTimeout(() => { 
-          setSubscribing(false)
-          setSubscribed(true) 
-        }, 2000)
-      } else {
-        alert("Paiement annulé ou erreur SDK.")
-        setSubscribing(false)
-      }
+      alert(`Erreur lors de l'abonnement : ${res.error}`)
+      setSubscribing(false)
     }
   }
 
