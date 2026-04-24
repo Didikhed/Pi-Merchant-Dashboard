@@ -5,14 +5,14 @@ import { triggerPaymentWorkflow, getLatestWorkflowRun } from '../lib/github'
 import { getMerchantServices, getMerchantSubs, getContractEvents, createService } from '../lib/stellar'
 import { authenticatePi } from '../lib/pi'
 const TABS = [
-  { id: 'overview',     label: 'Overview',    icon: '⬡' },
-  { id: 'services',     label: 'Services',    icon: '💼', badge: '3' },
-  { id: 'subscribers',  label: 'Abonnés',     icon: '👥', badge: '432' },
-  { id: 'transactions', label: 'Transactions', icon: '🔄' },
-  { id: 'analytics',    label: 'Analytics',   icon: '📊' },
-  { id: 'marketing',    label: 'Marketing',   icon: '📣' },
-  { id: 'settings',     label: 'Paramètres',  icon: '⚙️' },
-  { id: 'logs',         label: 'Logs',        icon: '📡' },
+  { id: 'overview',     label: 'OVERVIEW',    icon: '⬡' },
+  { id: 'services',     label: 'SERVICES',    icon: '💼', badge: '3' },
+  { id: 'subscribers',  label: 'ABONNÉS',     icon: '👥', badge: '432' },
+  { id: 'transactions', label: 'TRANSACTIONS', icon: '🔄' },
+  { id: 'analytics',    label: 'ANALYTICS',   icon: '📊' },
+  { id: 'marketing',    label: 'MARKETING',   icon: '📣' },
+  { id: 'settings',     label: 'PARAMÈTRES',  icon: '⚙️' },
+  { id: 'logs',         label: 'LOGS',        icon: '📡' },
 ]
 
 
@@ -69,11 +69,11 @@ export default function Home() {
   useEffect(() => {
     const checkInit = setInterval(() => {
       if (typeof window !== 'undefined') {
-        if (window.__piInitialized) {
-          addLog('SYSTEM › SDK Pi détecté et prêt.', 'neon')
+        if (window.__PI_READY) {
+          addLog('SYSTEM › SDK Pi détecté et prêt (Testnet).', 'neon')
           clearInterval(checkInit)
-        } else if (window.__piSimulationMode) {
-          addLog('SYSTEM › SDK non disponible. Simulation prête.', 'amber')
+        } else if (window.__PI_SIM || window.__piSimulationMode) {
+          addLog('SYSTEM › SDK non disponible. Simulation activée.', 'amber')
           clearInterval(checkInit)
         }
       }

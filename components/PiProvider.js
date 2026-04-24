@@ -4,44 +4,50 @@ import { useEffect } from 'react'
 
 export default function PiProvider() {
   useEffect(() => {
-    // Initialisation des flags globaux (comme dans ton code)
-    window.PiSDKReady = false;
-    window.PiSDKError = null;
-    
-    let retryCount = 0;
-    const MAX_RETRY = 5;
+    // Flags globaux inspirés de ta correction
+    window.__PI_READY = false;
+    window.__PI_SIM = false;
+    window.__PI_ERROR = null;
+    window.__PI_ATTEMPTS = 0;
 
-    const initSDK = () => {
-      if (typeof window !== 'undefined' && window.Pi) {
-        try {
-          console.log(`[Pi SDK] Tentative d'initialisation ${retryCount + 1}...`);
-          // On force sandbox: true car on est en phase de test (Testnet)
-          window.Pi.init({ version: "2.0", sandbox: true });
-          
-          window.PiSDKReady = true;
-          window.__piInitialized = true; // Pour notre log interne
-          console.log("[Pi SDK] ✅ Initialisé avec succès (Mode Sandbox)");
-        } catch (e) {
-          console.error("[Pi SDK] Erreur init:", e.message);
-          window.PiSDKError = e.message;
-          
-          if (retryCount < MAX_RETRY) {
-            retryCount++;
-            setTimeout(initSDK, 1000);
-          }
+    const tryInit = () => {
+      window.__PI_ATTEMPTS++;
+
+      if (typeof window.Pi === 'undefined') {
+        if (window.__PI_ATTEMPTS < 10) {
+          setTimeout(tryInit, 300);
+        } else {
+          window.__PI_SIM = true;
+          window.__PI_ERROR = 'SDK introuvable';
+          console.warn("[Pi SDK] SDK introuvable après 10 tentatives.");
         }
-      } else if (retryCount < MAX_RETRY) {
-        retryCount++;
-        setTimeout(initSDK, 1000);
-      } else {
-        // Échec définitif (Normal sur PC) -> On active la simulation
-        window.__piSimulationMode = true;
-        console.warn("[Pi SDK] SDK introuvable sur cet environnement. Mode simulation disponible.");
+        return;
+      }
+
+      try {
+        // ✅ sandbox: true (Testnet) - Correction majeure
+        window.Pi.init({ version: "2.0", sandbox: true });
+        
+        window.__PI_READY = true;
+        window.__piInitialized = true; // Pour compatibilité avec nos hooks existants
+        console.log(`[Pi SDK] ✅ Initialisé avec succès (Tentative ${window.__PI_ATTEMPTS})`);
+
+      } catch (e) {
+        // "not initialized" = timing, on retente avec backoff exponentiel
+        if (e.message && e.message.indexOf('not initialized') > -1 && window.__PI_ATTEMPTS < 8) {
+          const delay = Math.min(500 * Math.pow(2, window.__PI_ATTEMPTS - 1), 5000);
+          console.warn(`[Pi SDK] Pas encore prêt, retry dans ${delay}ms...`);
+          setTimeout(tryInit, delay);
+        } else {
+          window.__PI_SIM = true;
+          window.__PI_ERROR = e.message;
+          console.error("[Pi SDK] Échec définitif de l'init:", e.message);
+        }
       }
     };
 
-    // Lancer dès que possible
-    initSDK();
+    // Lancement immédiat
+    tryInit();
   }, []);
 
   return (
