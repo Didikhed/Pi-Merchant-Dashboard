@@ -68,9 +68,14 @@ export default function Home() {
   // Détection de l'initialisation du SDK Pi
   useEffect(() => {
     const checkInit = setInterval(() => {
-      if (typeof window !== 'undefined' && window.__piInitialized) {
-        addLog('SYSTEM › SDK Pi détecté et prêt.', 'neon')
-        clearInterval(checkInit)
+      if (typeof window !== 'undefined') {
+        if (window.__piInitialized) {
+          addLog('SYSTEM › SDK Pi détecté et prêt.', 'neon')
+          clearInterval(checkInit)
+        } else if (window.__piSimulationMode) {
+          addLog('SYSTEM › SDK non disponible. Simulation prête.', 'amber')
+          clearInterval(checkInit)
+        }
       }
     }, 1000)
     return () => clearInterval(checkInit)

@@ -33,6 +33,10 @@ export default function PiProvider() {
       } else if (retryCount < MAX_RETRY) {
         retryCount++;
         setTimeout(initSDK, 1000);
+      } else {
+        // Échec définitif (Normal sur PC) -> On active la simulation
+        window.__piSimulationMode = true;
+        console.warn("[Pi SDK] SDK introuvable sur cet environnement. Mode simulation disponible.");
       }
     };
 
