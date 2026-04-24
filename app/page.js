@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import './page.css'
 import { triggerPaymentWorkflow, getLatestWorkflowRun } from '../lib/github'
 import { getMerchantServices, getMerchantSubs, getContractEvents, createService } from '../lib/stellar'
+import { checkPiSDK } from '../lib/pi'
 const TABS = [
   { id: 'overview',     label: 'Overview',    icon: '⬡' },
   { id: 'services',     label: 'Services',    icon: '💼', badge: '3' },
@@ -376,15 +377,13 @@ animate()
   }, [])
 
   const handleConnect = () => {
-    if (connected) return
-    setConnecting(true)
-    
-    // Simulation connexion
-    setTimeout(() => { 
-      setConnecting(false)
-      setConnected(true) 
-      addLog('SUCCESS › Portefeuille marchand connecté (Simulation)', 'neon')
-    }, 1500)
+    // Étape 1 : On vérifie juste si le SDK est là
+    const res = checkPiSDK()
+    if (res.status === 'success') {
+      addLog(res.message, 'neon')
+    } else {
+      addLog(res.message, 'amber')
+    }
   }
 
   return (

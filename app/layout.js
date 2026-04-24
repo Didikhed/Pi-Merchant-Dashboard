@@ -1,4 +1,5 @@
 import './globals.css'
+import Script from 'next/script'
 
 export const metadata = {
   title: 'PiRC2 Merchant — Command Center',
@@ -13,6 +14,9 @@ export default function RootLayout({ children }) {
         <div className="scan-lines"></div>
         <div className="vignette"></div>
         {children}
+        
+        {/* Étape 1 : Chargement purement passif du SDK */}
+        <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="afterInteractive" />
       </body>
     </html>
   )
