@@ -1,5 +1,4 @@
 import './globals.css'
-import Script from 'next/script'
 
 export const metadata = {
   title: 'PiRC2 Merchant — Command Center',
@@ -10,7 +9,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <head>
-        <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
+        {/* Pi Network SDK — chargement natif obligatoire avant React */}
+        <script src="https://sdk.minepi.com/pi-sdk.js" async="false" />
       </head>
       <body>
         {/* Background FX */}
