@@ -19,8 +19,10 @@ export default function RootLayout({ children }) {
           __html: `
             try {
               if (typeof window !== 'undefined' && window.Pi) {
-                window.Pi.init({ version: "2.0", sandbox: true });
-                console.log("[Pi Architecture] SDK Initialisé avec succès au chargement de la page.");
+                // IMPORTANT: On supprime sandbox: true car sur le Pi Browser public (Mainnet), 
+                // le mode sandbox est bloqué et fait échouer silencieusement l'initialisation.
+                window.Pi.init({ version: "2.0" });
+                console.log("[Pi Architecture] SDK Initialisé en mode Mainnet (Production).");
               }
             } catch (e) {
               console.error("[Pi Architecture] Erreur critique d'initialisation :", e);
