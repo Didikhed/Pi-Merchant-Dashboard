@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import './page.css'
 import { triggerPaymentWorkflow, getLatestWorkflowRun } from '../lib/github'
 import { getMerchantServices, getMerchantSubs, getContractEvents, createService } from '../lib/stellar'
-import { initAndAuthenticatePi } from '../lib/pi'
+import { authenticatePi } from '../lib/pi'
 const TABS = [
   { id: 'overview',     label: 'Overview',    icon: '⬡' },
   { id: 'services',     label: 'Services',    icon: '💼', badge: '3' },
@@ -380,7 +380,7 @@ animate()
     if (connected) return
     setConnecting(true)
     
-    const res = await initAndAuthenticatePi()
+    const res = await authenticatePi()
     if (res.status === 'success') {
       addLog(res.message, 'neon')
       setMerchantAddr(res.user.uid)
