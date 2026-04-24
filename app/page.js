@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import './page.css'
 import { triggerPaymentWorkflow, getLatestWorkflowRun } from '../lib/github'
 import { getMerchantServices, getMerchantSubs, getContractEvents, createService } from '../lib/stellar'
-import { checkPiSDK } from '../lib/pi'
+import { initAndAuthenticatePi } from '../lib/pi'
 const TABS = [
   { id: 'overview',     label: 'Overview',    icon: '⬡' },
   { id: 'services',     label: 'Services',    icon: '💼', badge: '3' },
@@ -376,14 +376,26 @@ animate()
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
   }, [])
 
-  const handleConnect = () => {
-    // Étape 1 : On vérifie juste si le SDK est là
-    const res = checkPiSDK()
+  const handleConnect = async () => {
+    if (connected) return
+    setConnecting(true)
+    
+    const res = await initAndAuthenticatePi()
     if (res.status === 'success') {
       addLog(res.message, 'neon')
+      setMerchantAddr(res.user.uid)
+      setConnected(true)
     } else {
-      addLog(res.message, 'amber')
+      addLog(res.message, 'red')
+      // Fallback simulation si SDK introuvable (pour dev sur PC)
+      if (res.message.includes('introuvable')) {
+        setTimeout(() => {
+          setConnected(true)
+          addLog('⚠️ Mode simulation activé (Hors Pi Browser)', 'amber')
+        }, 1500)
+      }
     }
+    setConnecting(false)
   }
 
   return (
